@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Route Hilliness Analyzer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #F8F9FA;
+    color: #1F2937;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 24px;
+  }
+
+  h1 {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: #1F2937;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+    color: #6B7280;
+    margin-bottom: 48px;
+  }
+
+  /* Drop zone */
+  .dropzone {
+    border: 2px dashed #D1D5DB;
+    border-radius: 12px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #FFFFFF;
+    margin-bottom: 32px;
+  }
+  .dropzone:hover, .dropzone.dragover {
+    border-color: #2563EB;
+    background: #EFF6FF;
+  }
+  .dropzone-icon {
+    font-size: 2rem;
+    margin-bottom: 12px;
+    color: #9CA3AF;
+  }
+  .dropzone-text {
+    font-size: 1rem;
+    color: #6B7280;
+  }
+  .dropzone-text strong {
+    color: #2563EB;
+  }
+
+  input[type="file"] { display: none; }
+
+  /* Loaded files */
+  .loaded-files {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+  }
+  .file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    color: #374151;
+    font-weight: 500;
+  }
+  .file-chip .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #059669;
+  }
+  .file-chip .remove {
+    cursor: pointer;
+    color: #9CA3AF;
+    font-size: 16px;
+    line-height: 1;
+    margin-left: 4px;
+  }
+  .file-chip .remove:hover { color: #EF4444; }
+
+  /* Results section */
+  .results-section { display: none; }
+  .results-section.visible { display: block; }
+
+  /* Comparison layout */
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    margin-bottom: 32px;
+  }
+  @media (min-width: 640px) {
+    .comparison.two-up {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  /* Score card */
+  .score-card {
+    background: #FFFFFF;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .score-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  .route-name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1F2937;
+  }
+  .route-meta {
+    font-size: 0.8125rem;
+    color: #9CA3AF;
+    margin-top: 2px;
+  }
+
+  .big-score {
+    font-size: 3.5rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .score-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .score-descriptor {
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+
+  /* Component scores */
+  .component-scores {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #E5E7EB;
+  }
+  .component {
+    text-align: center;
+  }
+  .component-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #374151;
+  }
+  .component-label {
+    font-size: 0.75rem;
+    color: #9CA3AF;
+    margin-top: 2px;
+  }
+
+  /* Stats grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #E5E7EB;
+  }
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+  }
+  .stat-value {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+  }
+  .stat-label {
+    font-size: 0.75rem;
+    color: #9CA3AF;
+  }
+
+  /* Gradient distribution bar */
+  .gradient-bar-container {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #E5E7EB;
+  }
+  .gradient-bar-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #6B7280;
+    margin-bottom: 8px;
+  }
+  .gradient-bar {
+    display: flex;
+    height: 24px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #F3F4F6;
+  }
+  .gradient-bar .segment {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: white;
+    min-width: 0;
+    transition: width 0.4s ease;
+  }
+  .gradient-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: #6B7280;
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 3px;
+  }
+
+  /* Elevation profile */
+  .profile-section {
+    background: #FFFFFF;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 24px;
+  }
+  .profile-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 16px;
+  }
+  .profile-canvas-wrapper {
+    position: relative;
+    width: 100%;
+    height: 220px;
+  }
+  .profile-canvas-wrapper canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Methodology section */
+  .methodology {
+    background: #FFFFFF;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-top: 32px;
+  }
+  .methodology summary {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    padding: 4px 0;
+  }
+  .methodology-content {
+    margin-top: 16px;
+    font-size: 0.875rem;
+    color: #6B7280;
+    line-height: 1.7;
+  }
+  .methodology-content h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin-top: 16px;
+    margin-bottom: 4px;
+  }
+  .formula {
+    background: #F8F9FA;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.8125rem;
+    color: #374151;
+    margin: 8px 0;
+    overflow-x: auto;
+  }
+
+  /* Color scale for scores */
+  .score-flat { color: #059669; }
+  .score-rolling { color: #0891B2; }
+  .score-hilly { color: #D97706; }
+  .score-mountainous { color: #DC2626; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Route Hilliness Analyzer</h1>
+  <p class="subtitle">Drop a GPX file to score its hilliness — measuring volume, intensity, and gradient character.</p>
+
+  <div class="dropzone" id="dropzone">
+    <div class="dropzone-icon">&#x26F0;</div>
+    <div class="dropzone-text"><strong>Drop GPX files here</strong> or click to browse<br>Supports multiple files for comparison</div>
+  </div>
+  <input type="file" id="fileInput" accept=".gpx" multiple>
+
+  <div class="loaded-files" id="loadedFiles"></div>
+
+  <div class="results-section" id="results">
+    <div class="comparison" id="comparison"></div>
+    <div id="profiles"></div>
+  </div>
+
+  <div class="methodology">
+    <details>
+      <summary>How the Hilliness Score Works</summary>
+      <div class="methodology-content">
+        <p>The hilliness score combines three dimensions of what makes a route feel hilly. Each component uses <strong>logarithmic scaling</strong>, which expands differences between gentle and moderate routes while compressing the extreme end — matching how runners perceive difficulty.</p>
+
+        <h4>1. Climb Density (Volume) — 20% weight</h4>
+        <p>Total elevation gained divided by total distance. Log-scaled with a ceiling of ~160 ft/mi.</p>
+        <div class="formula">score = log(1 + gain_per_km) / log(1 + 30) × 100</div>
+
+        <h4>2. Gradient-Weighted Intensity — 35% weight</h4>
+        <p>For each climbing segment, the gradient is raised to the power of 2.0 and multiplied by segment distance. The squared exponent means a 12% grade contributes 4× more than a 6% grade (not just 2×). Log-scaled with a ceiling of 20.</p>
+        <div class="formula">raw = Σ(distance_i × gradient_i²) / total_distance &nbsp;→&nbsp; score = log(1 + raw) / log(1 + 20) × 100</div>
+
+        <h4>3. Steep Proportion (Character) — 45% weight</h4>
+        <p>The fraction of climbing distance above 8% gradient. This component carries the most weight because it's the biggest perceptual differentiator — routes with similar total gain feel very different depending on how that gain is distributed. Log-scaled with a ceiling at 50%.</p>
+        <div class="formula">steep_ratio = distance_above_8% / total_climb_distance &nbsp;→&nbsp; log-scaled 0–100</div>
+
+        <h4>Why Logarithmic Scaling?</h4>
+        <p>Linear scaling compresses gentle-to-moderate routes into a narrow band at the bottom. Log scaling acts like a magnifying glass on the lower end: the difference between 50 and 70 ft/mi gain gets amplified, while the difference between 200 and 220 ft/mi gets compressed. This matches how runners perceive effort — the jump from flat to rolling feels much bigger than the jump from hilly to very hilly.</p>
+
+        <h4>Pre-processing</h4>
+        <p>GPS elevation data goes through three filtering passes. First, a <strong>median filter</strong> (window size 7) removes sharp elevation spikes caused by GPS drift during watch pauses. Second, a <strong>moving average</strong> (window size 5) smooths remaining noise. Third, a <strong>3-meter dead-band threshold</strong> eliminates GPS wobble — small oscillations under 3m (~10ft) that aren't real terrain changes but accumulate into significant phantom elevation gain. This approach mirrors Strava's elevation correction and produces gain figures consistent with corrected industry values. Sub-1.5ft segments are discarded as GPS jitter. Only uphill segments (>0.5% grade) contribute to the score.</p>
+
+        <h4>Score Ranges</h4>
+        <p>0–15 Flat &nbsp;·&nbsp; 15–30 Nearly Flat &nbsp;·&nbsp; 30–45 Gently Rolling &nbsp;·&nbsp; 45–60 Rolling &nbsp;·&nbsp; 60–70 Hilly &nbsp;·&nbsp; 70–82 Very Hilly &nbsp;·&nbsp; 82–100 Mountainous</p>
+      </div>
+    </details>
+  </div>
+</div>
+
+<script>
+// ============ GPX PARSING ============
+function parseGPX(xmlString) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlString, 'text/xml');
+  const name = doc.querySelector('trk > name')?.textContent || 'Unnamed Route';
+  const trkpts = doc.querySelectorAll('trkpt');
+  const points = [];
+  trkpts.forEach(pt => {
+    const lat = parseFloat(pt.getAttribute('lat'));
+    const lon = parseFloat(pt.getAttribute('lon'));
+    const ele = parseFloat(pt.querySelector('ele')?.textContent || '0');
+    points.push({ lat, lon, ele });
+  });
+  return { name, points };
+}
+
+// ============ HAVERSINE DISTANCE ============
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ============ SPIKE REMOVAL (Median Filter) ============
+// Median filters excel at removing impulse noise (GPS spikes from pausing)
+// while preserving the true terrain shape.
+function medianFilter(points, windowSize = 5) {
+  const half = Math.floor(windowSize / 2);
+  return points.map((p, i) => {
+    const window = [];
+    for (let j = Math.max(0, i - half); j <= Math.min(points.length - 1, i + half); j++) {
+      window.push(points[j].ele);
+    }
+    window.sort((a, b) => a - b);
+    const median = window[Math.floor(window.length / 2)];
+    return { ...p, ele: median };
+  });
+}
+
+// ============ SMOOTHING ============
+function smoothElevation(points, windowSize = 5) {
+  // First pass: median filter to remove GPS spikes/noise from pauses
+  const despiked = medianFilter(points, 7);
+  // Second pass: moving average to smooth remaining noise
+  const half = Math.floor(windowSize / 2);
+  return despiked.map((p, i) => {
+    let sum = 0, count = 0;
+    for (let j = Math.max(0, i - half); j <= Math.min(despiked.length - 1, i + half); j++) {
+      sum += despiked[j].ele;
+      count++;
+    }
+    return { ...p, ele: sum / count };
+  });
+}
+
+// ============ BUILD SEGMENTS ============
+// Resample elevation at fixed distance intervals (default 50m) to compute
+// gradients over meaningful distances, eliminating noise from point-to-point
+// GPS jitter that creates artificially steep short segments.
+function buildSegments(points, intervalM = 25) {
+  // First, build cumulative distance + elevation arrays
+  const cumDists = [0];
+  for (let i = 1; i < points.length; i++) {
+    cumDists.push(cumDists[i-1] + haversine(points[i-1].lat, points[i-1].lon, points[i].lat, points[i].lon));
+  }
+  const totalDist = cumDists[cumDists.length - 1];
+
+  // Resample at fixed intervals
+  const segments = [];
+  let cumDist = 0;
+  let prevEle = points[0].ele;
+  let ptIdx = 0;
+
+  for (let d = intervalM; d <= totalDist; d += intervalM) {
+    // Find the two bracketing points for distance d
+    while (ptIdx < cumDists.length - 1 && cumDists[ptIdx + 1] < d) ptIdx++;
+    // Interpolate elevation at distance d
+    const frac = (cumDists[ptIdx + 1] - cumDists[ptIdx]) > 0
+      ? (d - cumDists[ptIdx]) / (cumDists[ptIdx + 1] - cumDists[ptIdx])
+      : 0;
+    const ele = points[ptIdx].ele + frac * (points[Math.min(ptIdx + 1, points.length - 1)].ele - points[ptIdx].ele);
+
+    const eleChange = ele - prevEle;
+    const gradient = (eleChange / intervalM) * 100;
+    cumDist = d;
+    segments.push({
+      dist: intervalM,
+      eleChange,
+      gradient,
+      cumDist,
+      startEle: prevEle,
+      endEle: ele
+    });
+    prevEle = ele;
+  }
+
+  // Handle remaining distance
+  const remainDist = totalDist - (segments.length * intervalM);
+  if (remainDist > 5) {
+    const lastEle = points[points.length - 1].ele;
+    const eleChange = lastEle - prevEle;
+    const gradient = (eleChange / remainDist) * 100;
+    segments.push({
+      dist: remainDist,
+      eleChange,
+      gradient,
+      cumDist: totalDist,
+      startEle: prevEle,
+      endEle: lastEle
+    });
+  }
+
+  return segments;
+}
+
+// ============ DEAD-BAND GAIN/LOSS ============
+// Mimics Strava's elevation correction: only register an elevation change
+// when the cumulative change from the last registered point exceeds the
+// threshold. This eliminates GPS wobble that accumulates into phantom gain.
+// Applied ONLY to gain/loss totals — not to the profile or gradient calculations.
+function computeDeadBandGain(points, threshold = 3.0) {
+  if (points.length === 0) return { gain: 0, loss: 0 };
+  let gain = 0, loss = 0;
+  let refEle = points[0].ele;
+  for (let i = 1; i < points.length; i++) {
+    const diff = points[i].ele - refEle;
+    if (diff >= threshold) {
+      gain += diff;
+      refEle = points[i].ele;
+    } else if (diff <= -threshold) {
+      loss += Math.abs(diff);
+      refEle = points[i].ele;
+    }
+  }
+  return { gain, loss };
+}
+
+// ============ COMPUTE HILLINESS ============
+function computeHilliness(gpxData) {
+  const smoothed = smoothElevation(gpxData.points, 5);
+  const segments = buildSegments(smoothed);
+
+  const totalDist = segments.reduce((s, seg) => s + seg.dist, 0);
+  const totalDistKm = totalDist / 1000;
+
+  // Elevation gain/loss via dead-band threshold (matches Strava correction)
+  const deadBand = computeDeadBandGain(smoothed, 3.0);
+  const totalGain = deadBand.gain;
+  const totalLoss = deadBand.loss;
+
+  let minEle = Infinity, maxEle = -Infinity;
+
+  // Gradient bands (for climbing segments only)
+  const bands = {
+    easy: { min: 0, max: 4, dist: 0, label: '0–4%' },
+    moderate: { min: 4, max: 8, dist: 0, label: '4–8%' },
+    hard: { min: 8, max: 12, dist: 0, label: '8–12%' },
+    severe: { min: 12, max: Infinity, dist: 0, label: '12%+' }
+  };
+
+  const bandColors = {
+    easy: '#059669',
+    moderate: '#0891B2',
+    hard: '#D97706',
+    severe: '#DC2626'
+  };
+
+  // Gradient-weighted intensity accumulator
+  let intensitySum = 0;
+  let climbDist = 0;
+
+  // Process segments for gradients, intensity, and bands
+  // (using smoothed data — NOT dead-banded — for accurate gradient shapes)
+  segments.forEach(seg => {
+    if (seg.endEle < minEle) minEle = seg.endEle;
+    if (seg.endEle > maxEle) maxEle = seg.endEle;
+    if (seg.startEle < minEle) minEle = seg.startEle;
+    if (seg.startEle > maxEle) maxEle = seg.startEle;
+
+    // Only consider climbing segments for hilliness
+    if (seg.gradient > 0.5) { // > 0.5% is "climbing"
+      const absGrad = Math.abs(seg.gradient);
+      climbDist += seg.dist;
+
+      // Gradient-weighted intensity: dist × gradient^2.0
+      intensitySum += seg.dist * Math.pow(absGrad, 2.0);
+
+      // Band classification
+      if (absGrad < 4) bands.easy.dist += seg.dist;
+      else if (absGrad < 8) bands.moderate.dist += seg.dist;
+      else if (absGrad < 12) bands.hard.dist += seg.dist;
+      else bands.severe.dist += seg.dist;
+    }
+  });
+
+  // ---- LOGARITHMIC SCALING ----
+  // Log scaling expands differences at the low end of the scale while
+  // compressing the top, giving much better differentiation between
+  // gentle and moderately hilly routes. Formula:
+  //   score = log(1 + value) / log(1 + ceiling) × 100
+  // A flat route (value=0) still scores 0; a route at the ceiling scores 100.
+
+  // ---- Component 1: Climb Density (volume) — 20% weight ----
+  const gainPerKm = totalDistKm > 0 ? totalGain / totalDistKm : 0;
+  // Ceiling: 30 m/km (a very hilly road route; mountain trails exceed this)
+  const densityScore = Math.min(100, Math.log(1 + gainPerKm) / Math.log(1 + 30) * 100);
+
+  // ---- Component 2: Gradient-Weighted Intensity — 35% weight ----
+  const rawIntensity = totalDist > 0 ? intensitySum / totalDist : 0;
+  // Ceiling: 20 (with alpha=2.0, a sustained steep route reaches ~15-20)
+  const intensityScore = Math.min(100, Math.log(1 + rawIntensity) / Math.log(1 + 20) * 100);
+
+  // ---- Component 3: Steep Proportion (character) — 45% weight ----
+  // Heaviest weight because this is the biggest perceptual differentiator
+  // for routes with similar total gain
+  const steepDist = bands.hard.dist + bands.severe.dist;
+  const steepRatio = climbDist > 0 ? steepDist / climbDist : 0;
+  // Scale steep_ratio (0-1) to 0-100 range, log-scaled
+  // Ceiling: 50% of climbing at 8%+ = score 100
+  const steepScore = Math.min(100, Math.log(1 + steepRatio * 100) / Math.log(1 + 50) * 100);
+
+  // ---- Composite Score ----
+  const composite = Math.round(
+    densityScore * 0.20 +
+    intensityScore * 0.35 +
+    steepScore * 0.45
+  );
+
+  // Descriptor — finer-grained labels for better differentiation
+  let descriptor, scoreClass;
+  if (composite < 15) { descriptor = 'Flat'; scoreClass = 'score-flat'; }
+  else if (composite < 30) { descriptor = 'Nearly Flat'; scoreClass = 'score-flat'; }
+  else if (composite < 45) { descriptor = 'Gently Rolling'; scoreClass = 'score-rolling'; }
+  else if (composite < 60) { descriptor = 'Rolling'; scoreClass = 'score-rolling'; }
+  else if (composite < 70) { descriptor = 'Hilly'; scoreClass = 'score-hilly'; }
+  else if (composite < 82) { descriptor = 'Very Hilly'; scoreClass = 'score-hilly'; }
+  else { descriptor = 'Mountainous'; scoreClass = 'score-mountainous'; }
+
+  // Build elevation profile data (sampled for drawing)
+  const profilePoints = [];
+  let cd = 0;
+  for (let i = 0; i < smoothed.length; i++) {
+    if (i > 0) {
+      cd += haversine(smoothed[i-1].lat, smoothed[i-1].lon, smoothed[i].lat, smoothed[i].lon);
+    }
+    profilePoints.push({ dist: cd, ele: smoothed[i].ele });
+  }
+
+  // Subsample profile to ~500 points for performance
+  const step = Math.max(1, Math.floor(profilePoints.length / 500));
+  const sampledProfile = profilePoints.filter((_, i) => i % step === 0);
+  if (sampledProfile[sampledProfile.length - 1] !== profilePoints[profilePoints.length - 1]) {
+    sampledProfile.push(profilePoints[profilePoints.length - 1]);
+  }
+
+  return {
+    name: gpxData.name,
+    composite,
+    descriptor,
+    scoreClass,
+    densityScore: Math.round(densityScore),
+    intensityScore: Math.round(intensityScore),
+    steepScore: Math.round(steepScore),
+    totalDist: totalDistKm,
+    totalGain,
+    totalLoss,
+    minEle,
+    maxEle,
+    gainPerKm,
+    bands,
+    bandColors,
+    climbDist,
+    profile: sampledProfile,
+    segments
+  };
+}
+
+// ============ RENDERING ============
+function renderResults(results) {
+  const section = document.getElementById('results');
+  const compDiv = document.getElementById('comparison');
+  const profDiv = document.getElementById('profiles');
+
+  section.classList.add('visible');
+  compDiv.innerHTML = '';
+  profDiv.innerHTML = '';
+  compDiv.className = 'comparison' + (results.length === 2 ? ' two-up' : '');
+
+  // Compute global elevation range across all routes for consistent Y-axis
+  let globalMinEle = Infinity, globalMaxEle = -Infinity;
+  results.forEach(r => {
+    if (r.minEle < globalMinEle) globalMinEle = r.minEle;
+    if (r.maxEle > globalMaxEle) globalMaxEle = r.maxEle;
+  });
+
+  results.forEach((r, idx) => {
+    // Score card
+    const card = document.createElement('div');
+    card.className = 'score-card';
+
+    const bandEntries = Object.entries(r.bands);
+    const totalBandDist = bandEntries.reduce((s, [,b]) => s + b.dist, 0);
+
+    card.innerHTML = `
+      <div class="score-card-header">
+        <div>
+          <div class="route-name">${r.name}</div>
+          <div class="route-meta">${(r.totalDist * 0.621371).toFixed(2)} mi</div>
+        </div>
+        <div style="text-align:right">
+          <div class="big-score ${r.scoreClass}">${r.composite}</div>
+          <div class="score-label">Hilliness</div>
+          <div class="score-descriptor ${r.scoreClass}">${r.descriptor}</div>
+        </div>
+      </div>
+      <div class="component-scores">
+        <div class="component">
+          <div class="component-value">${r.densityScore}</div>
+          <div class="component-label">Climb Density</div>
+        </div>
+        <div class="component">
+          <div class="component-value">${r.intensityScore}</div>
+          <div class="component-label">Intensity</div>
+        </div>
+        <div class="component">
+          <div class="component-value">${r.steepScore}</div>
+          <div class="component-label">Steep %</div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value">${(r.totalGain * 3.28084).toFixed(0)} ft</div>
+          <div class="stat-label">Elevation Gain</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${(r.totalLoss * 3.28084).toFixed(0)} ft</div>
+          <div class="stat-label">Elevation Loss</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${(r.gainPerKm * 3.28084 * 1.60934).toFixed(0)} ft/mi</div>
+          <div class="stat-label">Gain per Mile</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">${(r.minEle * 3.28084).toFixed(0)}–${(r.maxEle * 3.28084).toFixed(0)} ft</div>
+          <div class="stat-label">Elevation Range</div>
+        </div>
+      </div>
+      <div class="gradient-bar-container">
+        <div class="gradient-bar-label">Climb Gradient Distribution</div>
+        <div class="gradient-bar" id="gradbar-${idx}"></div>
+        <div class="gradient-legend" id="gradlegend-${idx}"></div>
+      </div>
+    `;
+    compDiv.appendChild(card);
+
+    // Render gradient bar
+    const bar = card.querySelector(`#gradbar-${idx}`);
+    const legend = card.querySelector(`#gradlegend-${idx}`);
+    bandEntries.forEach(([key, band]) => {
+      const pct = totalBandDist > 0 ? (band.dist / totalBandDist * 100) : 0;
+      if (pct > 0) {
+        const seg = document.createElement('div');
+        seg.className = 'segment';
+        seg.style.width = pct + '%';
+        seg.style.background = r.bandColors[key];
+        if (pct > 8) seg.textContent = Math.round(pct) + '%';
+        bar.appendChild(seg);
+      }
+      const li = document.createElement('div');
+      li.className = 'legend-item';
+      li.innerHTML = `<span class="legend-dot" style="background:${r.bandColors[key]}"></span>${band.label} (${pct.toFixed(0)}%)`;
+      legend.appendChild(li);
+    });
+
+    // Elevation profile
+    const profCard = document.createElement('div');
+    profCard.className = 'profile-section';
+    profCard.innerHTML = `
+      <div class="profile-title">${r.name} — Elevation Profile</div>
+      <div class="profile-canvas-wrapper">
+        <canvas id="profile-canvas-${idx}"></canvas>
+      </div>
+    `;
+    profDiv.appendChild(profCard);
+
+    requestAnimationFrame(() => drawProfile(r, idx, globalMinEle, globalMaxEle));
+  });
+}
+
+function drawProfile(result, idx, globalMinE, globalMaxE) {
+  const canvas = document.getElementById(`profile-canvas-${idx}`);
+  if (!canvas) return;
+  const wrapper = canvas.parentElement;
+  const dpr = window.devicePixelRatio || 1;
+  const w = wrapper.clientWidth;
+  const h = wrapper.clientHeight;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const prof = result.profile;
+  const pad = { top: 16, right: 16, bottom: 32, left: 58 };
+  const plotW = w - pad.left - pad.right;
+  const plotH = h - pad.top - pad.bottom;
+
+  const maxDist = prof[prof.length - 1].dist;
+  const minE = (globalMinE != null ? globalMinE : Math.min(...prof.map(p => p.ele))) - 5;
+  const maxE = (globalMaxE != null ? globalMaxE : Math.max(...prof.map(p => p.ele))) + 5;
+  const eleRange = maxE - minE || 1;
+
+  const toX = d => pad.left + (d / maxDist) * plotW;
+  const toY = e => pad.top + (1 - (e - minE) / eleRange) * plotH;
+
+  // Grid lines
+  ctx.strokeStyle = '#E5E7EB';
+  ctx.lineWidth = 0.5;
+  const nGridH = 4;
+  for (let i = 0; i <= nGridH; i++) {
+    const y = pad.top + (i / nGridH) * plotH;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w - pad.right, y); ctx.stroke();
+    const eleVal = maxE - (i / nGridH) * eleRange;
+    ctx.fillStyle = '#9CA3AF';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText((eleVal * 3.28084).toFixed(0) + 'ft', pad.left - 6, y + 4);
+  }
+
+  // Distance labels
+  ctx.textAlign = 'center';
+  const nGridD = 5;
+  for (let i = 0; i <= nGridD; i++) {
+    const d = (i / nGridD) * maxDist;
+    const x = toX(d);
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, h - pad.bottom); ctx.stroke();
+    ctx.fillStyle = '#9CA3AF';
+    ctx.fillText((d / 1000 * 0.621371).toFixed(1) + 'mi', x, h - pad.bottom + 16);
+  }
+
+  // Gradient-colored fill
+  // We'll draw segment by segment with color based on gradient
+  for (let i = 1; i < prof.length; i++) {
+    const x0 = toX(prof[i-1].dist);
+    const x1 = toX(prof[i].dist);
+    const y0 = toY(prof[i-1].ele);
+    const y1 = toY(prof[i].ele);
+    const yBottom = toY(minE);
+
+    const dDist = prof[i].dist - prof[i-1].dist;
+    const grad = dDist > 0 ? ((prof[i].ele - prof[i-1].ele) / dDist) * 100 : 0;
+
+    let color;
+    if (grad < 0.5) color = 'rgba(229,231,235,0.5)';      // flat/downhill
+    else if (grad < 4) color = 'rgba(5,150,105,0.35)';     // easy
+    else if (grad < 8) color = 'rgba(8,145,178,0.4)';      // moderate
+    else if (grad < 12) color = 'rgba(217,119,6,0.45)';    // hard
+    else color = 'rgba(220,38,38,0.5)';                     // severe
+
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.lineTo(x1, yBottom);
+    ctx.lineTo(x0, yBottom);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Profile line
+  ctx.strokeStyle = '#374151';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  prof.forEach((p, i) => {
+    const x = toX(p.dist);
+    const y = toY(p.ele);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+}
+
+// ============ FILE HANDLING ============
+const loadedRoutes = [];
+
+function handleFiles(files) {
+  Array.from(files).forEach(file => {
+    if (!file.name.endsWith('.gpx')) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const gpxData = parseGPX(e.target.result);
+      const result = computeHilliness(gpxData);
+      loadedRoutes.push(result);
+      updateUI();
+    };
+    reader.readAsText(file);
+  });
+}
+
+function updateUI() {
+  // File chips
+  const chipsDiv = document.getElementById('loadedFiles');
+  chipsDiv.innerHTML = '';
+  loadedRoutes.forEach((r, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'file-chip';
+    chip.innerHTML = `<span class="dot"></span>${r.name}<span class="remove" data-idx="${i}">&times;</span>`;
+    chipsDiv.appendChild(chip);
+  });
+
+  // Remove handler
+  chipsDiv.querySelectorAll('.remove').forEach(btn => {
+    btn.addEventListener('click', e => {
+      loadedRoutes.splice(parseInt(e.target.dataset.idx), 1);
+      updateUI();
+    });
+  });
+
+  if (loadedRoutes.length > 0) {
+    renderResults(loadedRoutes);
+  } else {
+    document.getElementById('results').classList.remove('visible');
+  }
+}
+
+// ============ EVENT LISTENERS ============
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('dragover');
+  handleFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', e => handleFiles(e.target.files));
+
+// Resize handling
+window.addEventListener('resize', () => {
+  if (loadedRoutes.length > 0) {
+    let gMin = Infinity, gMax = -Infinity;
+    loadedRoutes.forEach(r => { if (r.minEle < gMin) gMin = r.minEle; if (r.maxEle > gMax) gMax = r.maxEle; });
+    loadedRoutes.forEach((r, i) => drawProfile(r, i, gMin, gMax));
+  }
+});
+</script>
+</body>
+</html>
