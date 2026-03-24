@@ -3,14 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Route Hilliness Analyzer</title>
-<script src="/ingest/static/array.js"></script>
+<title>VertHurt — Route Hilliness Analyzer</title>
+<script src="/ingest/static/array.js" onerror="window.posthog={init:()=>{},capture:()=>{}}"></script>
 <script>
-  posthog.init('phc_p73TuSUytTY81qH464bPr7eC99btH2sjRdy1yzsCGhI', {
-    api_host: '/ingest',
-    ui_host: 'https://us.posthog.com',
-    defaults: '2026-01-30'
-  })
+  try {
+    posthog.init('phc_p73TuSUytTY81qH464bPr7eC99btH2sjRdy1yzsCGhI', {
+      api_host: '/ingest',
+      ui_host: 'https://us.posthog.com',
+      defaults: '2026-01-30'
+    });
+  } catch(e) {
+    window.posthog = { init: () => {}, capture: () => {} };
+  }
 </script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,6 +31,14 @@
     max-width: 960px;
     margin: 0 auto;
     padding: 48px 24px;
+  }
+
+  .logo-container {
+    margin-bottom: 8px;
+  }
+  .site-logo {
+    height: 48px;
+    width: auto;
   }
 
   h1 {
@@ -327,12 +339,92 @@
   .score-rolling { color: #0891B2; }
   .score-hilly { color: #D97706; }
   .score-mountainous { color: #DC2626; }
+
+  /* Thumbnail elevation profile in card */
+  .thumb-profile {
+    margin-top: 12px;
+    height: 48px;
+    position: relative;
+  }
+  .thumb-profile canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Tooltip on component scores */
+  .component {
+    position: relative;
+  }
+  .component .tooltip {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1F2937;
+    color: #F9FAFB;
+    font-size: 0.7rem;
+    font-weight: 400;
+    line-height: 1.4;
+    padding: 8px 12px;
+    border-radius: 6px;
+    width: 200px;
+    text-align: left;
+    z-index: 10;
+    pointer-events: none;
+    transition: opacity 0.15s;
+  }
+  .component .tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #1F2937;
+  }
+  .component:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+  }
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>Route Hilliness Analyzer</h1>
-  <p class="subtitle">Drop a GPX file to score its hilliness — measuring volume, intensity, and gradient character.</p>
+  <div class="logo-container">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48" width="200" height="48" class="site-logo">
+      <defs>
+        <linearGradient id="vhGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#059669"/>
+          <stop offset="50%" stop-color="#10B981"/>
+          <stop offset="100%" stop-color="#2563EB"/>
+        </linearGradient>
+        <linearGradient id="vhGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#059669"/>
+          <stop offset="100%" stop-color="#2563EB"/>
+        </linearGradient>
+        <clipPath id="textClip">
+          <text x="0" y="36" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="38" font-weight="900" letter-spacing="-1.5">VERTHURT</text>
+        </clipPath>
+      </defs>
+      <g clip-path="url(#textClip)">
+        <rect x="0" y="0" width="200" height="48" fill="url(#vhGrad)"/>
+        <polygon points="0,48 12,38 24,42 38,18 52,32 60,28 72,8 84,30 96,24 108,48" fill="rgba(255,255,255,0.15)"/>
+        <polygon points="96,48 108,38 118,42 128,14 140,28 150,22 162,6 174,26 186,20 200,48" fill="rgba(255,255,255,0.12)"/>
+      </g>
+      <polyline points="0,40 18,40 24,40 30,38 36,40 54,40 60,40 64,36 68,44 72,20 76,42 80,38 84,40 108,40 114,40 118,36 122,44 126,16 130,44 134,36 138,40 168,40 174,40 178,38 182,40 200,40" fill="none" stroke="url(#vhGrad2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+      <g transform="translate(88, 3)" opacity="0.9">
+        <polyline points="0,12 6,2 9,7 15,0 21,8 24,5" fill="none" stroke="url(#vhGrad2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <text x="0" y="36" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="38" font-weight="900" letter-spacing="-1.5" fill="url(#vhGrad)">VERT<tspan fill="#2563EB" opacity="0.95">HURT</tspan></text>
+      <line x1="103" y1="8" x2="97" y2="40" stroke="url(#vhGrad2)" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+      <rect x="0" y="44" width="92" height="3" rx="1.5" fill="url(#vhGrad)" opacity="0.8"/>
+      <rect x="100" y="44" width="88" height="3" rx="1.5" fill="#2563EB" opacity="0.6"/>
+    </svg>
+  </div>
+  <p class="subtitle">Drop a GPX file to score how hilly your route really is.</p>
 
   <div class="dropzone" id="dropzone">
     <div class="dropzone-icon">&#x26F0;</div>
@@ -351,22 +443,22 @@
     <details>
       <summary>How the Hilliness Score Works</summary>
       <div class="methodology-content">
-        <p>The hilliness score combines three dimensions of what makes a route feel hilly. Each component uses <strong>logarithmic scaling</strong>, which expands differences between gentle and moderate routes while compressing the extreme end — matching how runners perceive difficulty.</p>
+        <p>The hilliness score combines three dimensions of what makes a route feel hilly. Each component uses <strong>square root scaling</strong>, which expands differences between gentle and moderate routes while preserving meaningful separation at the top end — unlike logarithmic scaling, which compresses hard routes into an indistinguishable band near 100.</p>
 
-        <h4>1. Climb Density (Volume) — 20% weight</h4>
-        <p>Total elevation gained divided by total distance. Log-scaled with a ceiling of ~160 ft/mi.</p>
-        <div class="formula">score = log(1 + gain_per_km) / log(1 + 30) × 100</div>
+        <h4>1. Climb Density (Volume) — 40% weight</h4>
+        <p>Total elevation gained divided by total distance. The most intuitive, universal metric — a marathon with 5,000ft of gain is objectively hillier than one with 1,200ft. Sqrt-scaled with a ceiling of ~264 ft/mi (50 m/km).</p>
+        <div class="formula">score = √(gain_per_km / 50) × 100</div>
 
         <h4>2. Gradient-Weighted Intensity — 35% weight</h4>
-        <p>For each climbing segment, the gradient is raised to the power of 2.0 and multiplied by segment distance. The squared exponent means a 12% grade contributes 4× more than a 6% grade (not just 2×). Log-scaled with a ceiling of 20.</p>
-        <div class="formula">raw = Σ(distance_i × gradient_i²) / total_distance &nbsp;→&nbsp; score = log(1 + raw) / log(1 + 20) × 100</div>
+        <p>For each climbing segment, the gradient is raised to the power of 1.5 and multiplied by segment distance. The 1.5 exponent captures that steep grades are disproportionately hard without over-penalizing moderate grades. Sqrt-scaled with a ceiling of 8.</p>
+        <div class="formula">raw = Σ(distance_i × gradient_i^1.5) / total_distance &nbsp;→&nbsp; score = √(raw / 8) × 100</div>
 
-        <h4>3. Steep Proportion (Character) — 45% weight</h4>
-        <p>The fraction of climbing distance above 8% gradient. This component carries the most weight because it's the biggest perceptual differentiator — routes with similar total gain feel very different depending on how that gain is distributed. Log-scaled with a ceiling at 50%.</p>
-        <div class="formula">steep_ratio = distance_above_8% / total_climb_distance &nbsp;→&nbsp; log-scaled 0–100</div>
+        <h4>3. Climb Continuity — 25% weight</h4>
+        <p>Measures how sustained the climbs are. A route with one long 2km climb feels much hillier than one with twenty 100m bumps, even if total climbing distance is the same. Uses a power-sum formula where each climb's length is raised to p=1.3, naturally rewarding longer climbs disproportionately without arbitrary blending of statistics. Sqrt-scaled with a ceiling of 500.</p>
+        <div class="formula">metric = Σ(climb_length^1.3) / total_climb_distance &nbsp;→&nbsp; score = √(metric / 500) × 100</div>
 
-        <h4>Why Logarithmic Scaling?</h4>
-        <p>Linear scaling compresses gentle-to-moderate routes into a narrow band at the bottom. Log scaling acts like a magnifying glass on the lower end: the difference between 50 and 70 ft/mi gain gets amplified, while the difference between 200 and 220 ft/mi gets compressed. This matches how runners perceive effort — the jump from flat to rolling feels much bigger than the jump from hilly to very hilly.</p>
+        <h4>Why Square Root Scaling?</h4>
+        <p>Linear scaling compresses gentle-to-moderate routes into a narrow band at the bottom. Logarithmic scaling fixes the bottom but over-compresses the top — routes with 130 and 260 ft/mi gain both hit the ceiling. Square root scaling strikes the right balance: the jump from flat to rolling is still amplified, while genuinely harder routes maintain meaningful separation (210 ft/mi scores 89, not 100).</p>
 
         <h4>Pre-processing</h4>
         <p>GPS elevation data goes through three filtering passes. First, a <strong>median filter</strong> (window size 7) removes sharp elevation spikes caused by GPS drift during watch pauses. Second, a <strong>moving average</strong> (window size 5) smooths remaining noise. Third, a <strong>3-meter dead-band threshold</strong> eliminates GPS wobble — small oscillations under 3m (~10ft) that aren't real terrain changes but accumulate into significant phantom elevation gain. This approach mirrors Strava's elevation correction and produces gain figures consistent with corrected industry values. Sub-1.5ft segments are discarded as GPS jitter. Only uphill segments (>0.5% grade) contribute to the score.</p>
@@ -384,6 +476,15 @@ function parseGPX(xmlString) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(xmlString, 'text/xml');
   const name = doc.querySelector('trk > name')?.textContent || 'Unnamed Route';
+  // Extract date from first trackpoint's <time> element, or metadata <time>
+  const timeEl = doc.querySelector('trkpt > time') || doc.querySelector('metadata > time');
+  let date = null;
+  if (timeEl) {
+    const d = new Date(timeEl.textContent);
+    if (!isNaN(d)) {
+      date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+  }
   const trkpts = doc.querySelectorAll('trkpt');
   const points = [];
   trkpts.forEach(pt => {
@@ -392,7 +493,7 @@ function parseGPX(xmlString) {
     const ele = parseFloat(pt.querySelector('ele')?.textContent || '0');
     points.push({ lat, lon, ele });
   });
-  return { name, points };
+  return { name, points, date };
 }
 
 // ============ HAVERSINE DISTANCE ============
@@ -553,6 +654,10 @@ function computeHilliness(gpxData) {
   let intensitySum = 0;
   let climbDist = 0;
 
+  // Track individual climbs for continuity scoring
+  let climbs = [];
+  let currentClimb = null;
+
   // Process segments for gradients, intensity, and bands
   // (using smoothed data — NOT dead-banded — for accurate gradient shapes)
   segments.forEach(seg => {
@@ -566,48 +671,85 @@ function computeHilliness(gpxData) {
       const absGrad = Math.abs(seg.gradient);
       climbDist += seg.dist;
 
-      // Gradient-weighted intensity: dist × gradient^2.0
-      intensitySum += seg.dist * Math.pow(absGrad, 2.0);
+      // Gradient-weighted intensity: dist × gradient^1.5
+      intensitySum += seg.dist * Math.pow(absGrad, 1.5);
 
       // Band classification
       if (absGrad < 4) bands.easy.dist += seg.dist;
       else if (absGrad < 8) bands.moderate.dist += seg.dist;
       else if (absGrad < 12) bands.hard.dist += seg.dist;
       else bands.severe.dist += seg.dist;
+
+      // Track climb continuity
+      if (!currentClimb) {
+        currentClimb = { dist: seg.dist, gain: seg.eleChange };
+      } else {
+        currentClimb.dist += seg.dist;
+        currentClimb.gain += seg.eleChange;
+      }
+    } else {
+      // End of a climb
+      if (currentClimb && currentClimb.dist > 0) {
+        climbs.push(currentClimb);
+      }
+      currentClimb = null;
     }
   });
+  // Don't forget last climb
+  if (currentClimb && currentClimb.dist > 0) {
+    climbs.push(currentClimb);
+  }
 
-  // ---- LOGARITHMIC SCALING ----
-  // Log scaling expands differences at the low end of the scale while
-  // compressing the top, giving much better differentiation between
-  // gentle and moderately hilly routes. Formula:
-  //   score = log(1 + value) / log(1 + ceiling) × 100
-  // A flat route (value=0) still scores 0; a route at the ceiling scores 100.
+  // ---- SQUARE ROOT SCALING ----
+  // Sqrt scaling expands differences at the low end while preserving
+  // meaningful separation at the top. Unlike log, routes with very different
+  // gain don't all compress into the 90-100 band.
+  //   score = sqrt(value / ceiling) × 100
 
-  // ---- Component 1: Climb Density (volume) — 20% weight ----
+  // ---- Component 1: Climb Density — weight from config (default 40%) ----
   const gainPerKm = totalDistKm > 0 ? totalGain / totalDistKm : 0;
-  // Ceiling: 30 m/km (a very hilly road route; mountain trails exceed this)
-  const densityScore = Math.min(100, Math.log(1 + gainPerKm) / Math.log(1 + 30) * 100);
+  // Ceiling: 50 m/km (~264 ft/mi)
+  const densityCeiling = 50;
+  const densityScore = Math.min(100, Math.sqrt(gainPerKm / densityCeiling) * 100);
 
-  // ---- Component 2: Gradient-Weighted Intensity — 35% weight ----
+  // ---- Component 2: Gradient Intensity — weight from config (default 35%) ----
   const rawIntensity = totalDist > 0 ? intensitySum / totalDist : 0;
-  // Ceiling: 20 (with alpha=2.0, a sustained steep route reaches ~15-20)
-  const intensityScore = Math.min(100, Math.log(1 + rawIntensity) / Math.log(1 + 20) * 100);
+  // Ceiling: 25 (calibrated: Arlington=8.3, Lake Lure=10.4, mountain routes=25+)
+  const intensityCeiling = 25;
+  const intensityScore = Math.min(100, Math.sqrt(rawIntensity / intensityCeiling) * 100);
 
-  // ---- Component 3: Steep Proportion (character) — 45% weight ----
-  // Heaviest weight because this is the biggest perceptual differentiator
-  // for routes with similar total gain
-  const steepDist = bands.hard.dist + bands.severe.dist;
-  const steepRatio = climbDist > 0 ? steepDist / climbDist : 0;
-  // Scale steep_ratio (0-1) to 0-100 range, log-scaled
-  // Ceiling: 50% of climbing at 8%+ = score 100
-  const steepScore = Math.min(100, Math.log(1 + steepRatio * 100) / Math.log(1 + 50) * 100);
+  // ---- Component 3: Climb Continuity — weight from config (default 25%) ----
+  // Power-sum metric: Σ(climb_length^p) / total_climb_distance, where p = 1.3
+  // This naturally rewards longer climbs disproportionately without arbitrary blending.
+  // Example: one 2km climb scores higher than ten 200m climbs with same total distance.
+  // p=1.3 gives meaningful separation without over-weighting extreme outliers.
+  let continuityScore = 0;
+  const CONTINUITY_EXPONENT = 1.3;
+  if (climbs.length > 0) {
+    const totalClimbDist = climbs.reduce((s, c) => s + c.dist, 0);
+    const powerSum = climbs.reduce((s, c) => s + Math.pow(c.dist, CONTINUITY_EXPONENT), 0);
+    const continuityMetric = powerSum / (totalClimbDist || 1);
+    // Ceiling: 15 (calibrated: rolling=4, Arlington=5.1, Lake Lure=5.4, mountain=10+)
+    const continuityCeiling = 15;
+    continuityScore = Math.min(100, Math.sqrt(continuityMetric / continuityCeiling) * 100);
+  }
 
-  // ---- Composite Score ----
+  // Debug: log raw values to calibrate ceilings
+  console.log(`[${gpxData.name}] Raw values:`,
+    `gainPerKm=${gainPerKm.toFixed(1)}`,
+    `rawIntensity=${rawIntensity.toFixed(2)}`,
+    `continuityMetric=${climbs.length > 0 ? (climbs.reduce((s,c) => s + Math.pow(c.dist, CONTINUITY_EXPONENT), 0) / climbs.reduce((s,c) => s + c.dist, 0)).toFixed(2) : 0}`,
+    `numClimbs=${climbs.length}`,
+    `climbLengths=[${climbs.map(c => c.dist.toFixed(0)).join(',')}]`
+  );
+  console.log(`[${gpxData.name}] Scores: density=${densityScore.toFixed(1)} intensity=${intensityScore.toFixed(1)} continuity=${continuityScore.toFixed(1)}`);
+
+  // ---- Composite Score (weights from config panel) ----
+  const weights = getWeights();
   const composite = Math.round(
-    densityScore * 0.20 +
-    intensityScore * 0.35 +
-    steepScore * 0.45
+    densityScore * weights.density +
+    intensityScore * weights.intensity +
+    continuityScore * weights.continuity
   );
 
   // Descriptor — finer-grained labels for better differentiation
@@ -639,12 +781,13 @@ function computeHilliness(gpxData) {
 
   return {
     name: gpxData.name,
+    date: gpxData.date,
     composite,
     descriptor,
     scoreClass,
     densityScore: Math.round(densityScore),
     intensityScore: Math.round(intensityScore),
-    steepScore: Math.round(steepScore),
+    continuityScore: Math.round(continuityScore),
     totalDist: totalDistKm,
     totalGain,
     totalLoss,
@@ -654,8 +797,13 @@ function computeHilliness(gpxData) {
     bands,
     bandColors,
     climbDist,
+    climbs,
     profile: sampledProfile,
-    segments
+    segments,
+    // Store raw values so we can recompute with different weights
+    _rawDensityScore: densityScore,
+    _rawIntensityScore: intensityScore,
+    _rawContinuityScore: continuityScore
   };
 }
 
@@ -685,11 +833,13 @@ function renderResults(results) {
     const bandEntries = Object.entries(r.bands);
     const totalBandDist = bandEntries.reduce((s, [,b]) => s + b.dist, 0);
 
+    const dateLine = r.date ? ` on ${r.date}` : '';
     card.innerHTML = `
       <div class="score-card-header">
         <div>
           <div class="route-name">${r.name}</div>
-          <div class="route-meta">${(r.totalDist * 0.621371).toFixed(2)} mi</div>
+          <div class="route-meta">${(r.totalDist * 0.621371).toFixed(2)} mi${dateLine}</div>
+          <div class="thumb-profile"><canvas id="thumb-canvas-${idx}"></canvas></div>
         </div>
         <div style="text-align:right">
           <div class="big-score ${r.scoreClass}">${r.composite}</div>
@@ -699,16 +849,19 @@ function renderResults(results) {
       </div>
       <div class="component-scores">
         <div class="component">
+          <div class="tooltip">Elevation gain per mile. Higher = more total climbing packed into the route. (40% of score)</div>
           <div class="component-value">${r.densityScore}</div>
           <div class="component-label">Climb Density</div>
         </div>
         <div class="component">
+          <div class="tooltip">How steep the climbs are, weighted by distance. Steeper grades contribute disproportionately more. (35% of score)</div>
           <div class="component-value">${r.intensityScore}</div>
           <div class="component-label">Intensity</div>
         </div>
         <div class="component">
-          <div class="component-value">${r.steepScore}</div>
-          <div class="component-label">Steep %</div>
+          <div class="tooltip">How sustained the climbs are. One long climb scores higher than many short bumps with the same total gain. (25% of score)</div>
+          <div class="component-value">${r.continuityScore}</div>
+          <div class="component-label">Continuity</div>
         </div>
       </div>
       <div class="stats-grid">
@@ -767,7 +920,10 @@ function renderResults(results) {
     `;
     profDiv.appendChild(profCard);
 
-    requestAnimationFrame(() => drawProfile(r, idx, globalMinEle, globalMaxEle));
+    requestAnimationFrame(() => {
+      drawProfile(r, idx, globalMinEle, globalMaxEle);
+      drawThumbProfile(r, idx, globalMinEle, globalMaxEle);
+    });
   });
 }
 
@@ -864,6 +1020,61 @@ function drawProfile(result, idx, globalMinE, globalMaxE) {
   ctx.stroke();
 }
 
+// ============ WEIGHT DEFAULTS ============
+function getWeights() {
+  return { density: 0.40, intensity: 0.35, continuity: 0.25 };
+}
+
+// ============ THUMBNAIL ELEVATION PROFILE ============
+function drawThumbProfile(result, idx, globalMinE, globalMaxE) {
+  const canvas = document.getElementById(`thumb-canvas-${idx}`);
+  if (!canvas) return;
+  const wrapper = canvas.parentElement;
+  const dpr = window.devicePixelRatio || 1;
+  const w = wrapper.clientWidth;
+  const h = wrapper.clientHeight;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const prof = result.profile;
+  if (prof.length < 2) return;
+  const maxDist = prof[prof.length - 1].dist;
+  const pad = 2;
+  const minE = (globalMinE != null ? globalMinE : Math.min(...prof.map(p => p.ele))) - 3;
+  const maxE = (globalMaxE != null ? globalMaxE : Math.max(...prof.map(p => p.ele))) + 3;
+  const eleRange = maxE - minE || 1;
+
+  const toX = d => pad + (d / maxDist) * (w - pad * 2);
+  const toY = e => pad + (1 - (e - minE) / eleRange) * (h - pad * 2);
+
+  // Filled area
+  ctx.beginPath();
+  ctx.moveTo(toX(prof[0].dist), h);
+  prof.forEach(p => ctx.lineTo(toX(p.dist), toY(p.ele)));
+  ctx.lineTo(toX(prof[prof.length - 1].dist), h);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, 'rgba(37,99,235,0.25)');
+  grad.addColorStop(1, 'rgba(37,99,235,0.05)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.strokeStyle = '#2563EB';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  prof.forEach((p, i) => {
+    const x = toX(p.dist);
+    const y = toY(p.ele);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+}
+
 // ============ FILE HANDLING ============
 const loadedRoutes = [];
 
@@ -938,7 +1149,10 @@ window.addEventListener('resize', () => {
   if (loadedRoutes.length > 0) {
     let gMin = Infinity, gMax = -Infinity;
     loadedRoutes.forEach(r => { if (r.minEle < gMin) gMin = r.minEle; if (r.maxEle > gMax) gMax = r.maxEle; });
-    loadedRoutes.forEach((r, i) => drawProfile(r, i, gMin, gMax));
+    loadedRoutes.forEach((r, i) => {
+      drawProfile(r, i, gMin, gMax);
+      drawThumbProfile(r, i, gMin, gMax);
+    });
   }
 });
 </script>
