@@ -34,6 +34,7 @@ class Segment:
 class Climb:
     dist: float
     gain: float
+    gradient_sum: float = 0.0  # sum of abs gradients × segment dist (for weighted avg)
 
 
 @dataclass
@@ -102,7 +103,7 @@ WEIGHT_CONTINUITY = 0.25
 # Ceilings (calibrated from real GPX data)
 DENSITY_CEILING = 50       # m/km (~264 ft/mi)
 INTENSITY_CEILING = 25     # calibrated: Arlington=8.3, Lake Lure=10.4, mountain=25+
-CONTINUITY_CEILING = 15    # calibrated: rolling=4, Arlington=5.1, mountain=10+
+CONTINUITY_CEILING = 50    # calibrated with gradient-weighted metric: Wilmington=6.5, Arlington=31, Lake Lure=39
 CONTINUITY_EXPONENT = 1.3  # power-sum exponent for climb length weighting
 
 # Pre-processing
@@ -362,10 +363,11 @@ def compute_score(gpx_xml: str, name: str = None, mode: str = "running") -> Scor
 
             # Track climb continuity
             if current_climb is None:
-                current_climb = Climb(dist=seg.dist, gain=seg.ele_change)
+                current_climb = Climb(dist=seg.dist, gain=seg.ele_change, gradient_sum=abs_grad * seg.dist)
             else:
                 current_climb.dist += seg.dist
                 current_climb.gain += seg.ele_change
+                current_climb.gradient_sum += abs_grad * seg.dist
         else:
             if current_climb and current_climb.dist > 0:
                 climbs.append(current_climb)
@@ -387,10 +389,15 @@ def compute_score(gpx_xml: str, name: str = None, mode: str = "running") -> Scor
     intensity_score = min(100, math.sqrt(raw_intensity / INTENSITY_CEILING) * 100)
 
     # Component 3: Climb Continuity (25%)
+    # Gradient-weighted: long gentle rises contribute much less than long steep climbs.
+    # Each climb's contribution = climb_length^p × avg_gradient_of_climb
     continuity_score = 0.0
     if climbs:
         total_climb_dist = sum(c.dist for c in climbs)
-        power_sum = sum(c.dist ** CONTINUITY_EXPONENT for c in climbs)
+        power_sum = sum(
+            (c.dist ** CONTINUITY_EXPONENT) * (c.gradient_sum / c.dist if c.dist > 0 else 0)
+            for c in climbs
+        )
         continuity_metric = power_sum / total_climb_dist if total_climb_dist > 0 else 0
         continuity_score = min(100, math.sqrt(continuity_metric / CONTINUITY_CEILING) * 100)
 
