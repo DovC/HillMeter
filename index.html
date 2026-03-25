@@ -843,23 +843,23 @@ function renderResults(results) {
         </div>
         <div style="text-align:right">
           <div class="big-score ${r.scoreClass}">${r.composite}</div>
-          <div class="score-label">Hilliness</div>
+          <div class="score-label">VertHurt</div>
           <div class="score-descriptor ${r.scoreClass}">${r.descriptor}</div>
         </div>
       </div>
       <div class="component-scores">
         <div class="component">
-          <div class="tooltip">Elevation gain per mile. Higher = more total climbing packed into the route. (40% of score)</div>
+          <div class="tooltip">Elevation gain per mile. Higher = more total climbing packed into the route.</div>
           <div class="component-value">${r.densityScore}</div>
           <div class="component-label">Climb Density</div>
         </div>
         <div class="component">
-          <div class="tooltip">How steep the climbs are, weighted by distance. Steeper grades contribute disproportionately more. (35% of score)</div>
+          <div class="tooltip">How steep the climbs are, weighted by distance. Steeper grades contribute disproportionately more.</div>
           <div class="component-value">${r.intensityScore}</div>
           <div class="component-label">Intensity</div>
         </div>
         <div class="component">
-          <div class="tooltip">How sustained the climbs are. One long climb scores higher than many short bumps with the same total gain. (25% of score)</div>
+          <div class="tooltip">How sustained the climbs are. One long climb scores higher than many short bumps with the same total gain.</div>
           <div class="component-value">${r.continuityScore}</div>
           <div class="component-label">Continuity</div>
         </div>
@@ -1084,6 +1084,8 @@ function handleFiles(files) {
     const reader = new FileReader();
     reader.onload = e => {
       const gpxData = parseGPX(e.target.result);
+      // Use filename (without .gpx extension) as route name
+      gpxData.name = file.name.replace(/\.gpx$/i, '').replace(/_/g, ' ');
       const result = computeHilliness(gpxData);
       loadedRoutes.push(result);
 
