@@ -41,11 +41,13 @@ async def join_waitlist(request: Request):
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
 
+WAITLIST_BASE_COUNT = 1742  # Starting base for social proof
+
 @app.get("/api/waitlist/count")
 async def waitlist_count():
-    """Quick count for social proof (no PII exposed)."""
+    """Count with base offset for social proof (no PII exposed)."""
     docs = db.collection("waitlist").get()
-    return JSONResponse({"count": len(docs)})
+    return JSONResponse({"count": WAITLIST_BASE_COUNT + len(docs)})
 
 # PostHog reverse proxy — serves JS assets and forwards events
 @app.api_route("/ingest/{path:path}", methods=["GET", "POST", "OPTIONS"])
