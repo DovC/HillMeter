@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VertHurt — Know Your Vert</title>
+<meta name="description" content="The definitive hilliness score for any running route. Drop your GPX, know your vert.">
+<meta property="og:title" content="VertHurt — Know Your Vert">
+<meta property="og:description" content="The definitive hilliness score for any running route. Coming soon.">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #2D9B6E;
+    --blue: #2563EB;
+    --dark: #0F172A;
+    --gray: #64748B;
+    --light: #F8FAFC;
+    --accent: #C97C2B;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--dark);
+    color: #E2E8F0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated mountain background */
+  .bg-mountains {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 40vh;
+    z-index: 0;
+    opacity: 0.08;
+  }
+  .bg-mountains svg { width: 100%; height: 100%; }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 80px 24px 48px;
+    text-align: center;
+  }
+
+  /* Logo */
+  .logo {
+    display: inline-block;
+    margin-bottom: 48px;
+  }
+  .logo svg { height: 56px; width: auto; }
+
+  /* Hero */
+  .tagline {
+    font-size: 1.1rem;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-size: 3.2rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 24px;
+    background: linear-gradient(135deg, var(--green), var(--blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    font-size: 1.25rem;
+    color: #94A3B8;
+    line-height: 1.6;
+    margin-bottom: 48px;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Feature pills */
+  .features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 48px;
+  }
+  .pill {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 100px;
+    padding: 8px 20px;
+    font-size: 0.9rem;
+    color: #CBD5E1;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s;
+  }
+  .pill:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: var(--green);
+    color: white;
+  }
+  .pill-icon { margin-right: 6px; }
+
+  /* Email form */
+  .signup-section {
+    margin-bottom: 32px;
+  }
+  .signup-label {
+    font-size: 0.95rem;
+    color: var(--gray);
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+  .form-row {
+    display: flex;
+    gap: 8px;
+    max-width: 440px;
+    margin: 0 auto;
+  }
+  .form-row input {
+    flex: 1;
+    padding: 14px 18px;
+    border-radius: 12px;
+    border: 2px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.05);
+    color: white;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-row input::placeholder { color: #475569; }
+  .form-row input:focus { border-color: var(--green); }
+
+  .form-row button {
+    padding: 14px 28px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, var(--green), var(--blue));
+    color: white;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .form-row button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(45,155,110,0.3);
+  }
+  .form-row button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Feedback message */
+  .feedback {
+    margin-top: 12px;
+    font-size: 0.9rem;
+    min-height: 24px;
+    transition: all 0.3s;
+  }
+  .feedback.success { color: var(--green); }
+  .feedback.error { color: #EF4444; }
+  .feedback.info { color: var(--accent); }
+
+  /* Social proof counter */
+  .social-proof {
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #475569;
+  }
+  .social-proof strong { color: var(--gray); }
+
+  /* Score preview mockup */
+  .preview {
+    margin-top: 64px;
+    margin-bottom: 48px;
+    position: relative;
+  }
+  .preview-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #475569;
+    margin-bottom: 20px;
+    font-weight: 600;
+  }
+  .mock-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 400px;
+    margin: 0 auto;
+    backdrop-filter: blur(12px);
+    text-align: left;
+  }
+  .mock-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+  }
+  .mock-route-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #E2E8F0;
+  }
+  .mock-route-meta {
+    font-size: 0.85rem;
+    color: #64748B;
+    margin-top: 4px;
+  }
+  .mock-score {
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--accent);
+  }
+  .mock-score-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #64748B;
+    text-align: right;
+    margin-top: 4px;
+  }
+  .mock-score-desc {
+    font-size: 0.8rem;
+    color: var(--accent);
+    text-align: right;
+    font-weight: 600;
+  }
+  .mock-profile {
+    height: 60px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .mock-profile svg {
+    width: 100%;
+    height: 100%;
+  }
+  .mock-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .mock-stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #CBD5E1;
+  }
+  .mock-stat-label {
+    font-size: 0.75rem;
+    color: #475569;
+  }
+
+  /* Glow effect behind card */
+  .preview::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(45,155,110,0.15), transparent 70%);
+    border-radius: 50%;
+    z-index: -1;
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 64px;
+    font-size: 0.8rem;
+    color: #334155;
+  }
+  .footer a { color: #475569; text-decoration: none; }
+  .footer a:hover { color: var(--green); }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .container { padding: 48px 16px 32px; }
+    h1 { font-size: 2.4rem; }
+    .form-row { flex-direction: column; }
+    .form-row button { width: 100%; }
+    .mock-card { padding: 24px; }
+  }
+
+  /* Subtle entrance animation */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .container > * {
+    animation: fadeUp 0.6s ease-out both;
+  }
+  .container > :nth-child(2) { animation-delay: 0.1s; }
+  .container > :nth-child(3) { animation-delay: 0.15s; }
+  .container > :nth-child(4) { animation-delay: 0.2s; }
+  .container > :nth-child(5) { animation-delay: 0.25s; }
+  .container > :nth-child(6) { animation-delay: 0.3s; }
+  .container > :nth-child(7) { animation-delay: 0.4s; }
+</style>
+</head>
+<body>
+
+<div class="bg-mountains">
+  <svg viewBox="0 0 1440 400" preserveAspectRatio="none">
+    <path d="M0,400 L0,280 L120,220 L240,300 L360,180 L480,260 L600,140 L720,220 L840,100 L960,200 L1080,120 L1200,240 L1320,160 L1440,280 L1440,400 Z" fill="url(#mountainGrad)"/>
+    <defs>
+      <linearGradient id="mountainGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#2D9B6E"/>
+        <stop offset="100%" stop-color="#2563EB"/>
+      </linearGradient>
+    </defs>
+  </svg>
+</div>
+
+<div class="container">
+
+  <div class="logo">
+    <svg viewBox="0 0 280 50" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#2D9B6E"/>
+          <stop offset="100%" stop-color="#2563EB"/>
+        </linearGradient>
+      </defs>
+      <path d="M5,38 L15,12 L22,26 L28,8 L34,26 L40,18 L46,38" stroke="url(#logoGrad)" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="56" y="37" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" font-size="32" font-weight="800" fill="url(#logoGrad)">VertHurt</text>
+    </svg>
+  </div>
+
+  <div class="tagline">Coming Soon</div>
+
+  <h1>Know Your Vert Before It Hurts</h1>
+
+  <p class="subtitle">
+    The definitive hilliness score for any running route. Drop a GPX file, instantly see how much vertical punishment awaits.
+  </p>
+
+  <div class="features">
+    <span class="pill"><span class="pill-icon">📊</span>Instant VertHurt Score</span>
+    <span class="pill"><span class="pill-icon">📈</span>Elevation Profiles</span>
+    <span class="pill"><span class="pill-icon">🏔️</span>Compare Routes</span>
+    <span class="pill"><span class="pill-icon">🏃</span>Built for Runners</span>
+    <span class="pill"><span class="pill-icon">🚴</span>Cycling Coming Soon</span>
+  </div>
+
+  <div class="signup-section">
+    <p class="signup-label">Get early access when we launch</p>
+    <form class="form-row" id="waitlist-form">
+      <input type="email" id="email-input" placeholder="your@email.com" required autocomplete="email">
+      <button type="submit" id="submit-btn">Join Waitlist</button>
+    </form>
+    <div class="feedback" id="feedback"></div>
+    <div class="social-proof" id="social-proof"></div>
+  </div>
+
+  <div class="preview">
+    <div class="preview-label">What you'll get</div>
+    <div class="mock-card">
+      <div class="mock-header">
+        <div>
+          <div class="mock-route-name">Blue Ridge Marathon</div>
+          <div class="mock-route-meta">26.2 mi · Apr 19, 2025</div>
+        </div>
+        <div>
+          <div class="mock-score">89</div>
+          <div class="mock-score-label">VertHurt</div>
+          <div class="mock-score-desc">Mountainous</div>
+        </div>
+      </div>
+      <div class="mock-profile">
+        <svg viewBox="0 0 336 60" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="profGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2D9B6E" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#2D9B6E" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <path d="M0,45 L15,42 L30,38 L45,30 L60,18 L75,12 L90,20 L105,35 L120,28 L135,15 L150,8 L165,14 L180,30 L195,38 L210,32 L225,20 L240,10 L255,18 L270,28 L285,22 L300,15 L315,25 L336,35" stroke="#2D9B6E" stroke-width="2" fill="none"/>
+          <path d="M0,45 L15,42 L30,38 L45,30 L60,18 L75,12 L90,20 L105,35 L120,28 L135,15 L150,8 L165,14 L180,30 L195,38 L210,32 L225,20 L240,10 L255,18 L270,28 L285,22 L300,15 L315,25 L336,35 L336,60 L0,60 Z" fill="url(#profGrad)"/>
+        </svg>
+      </div>
+      <div class="mock-stats">
+        <div><div class="mock-stat-value">4,842 ft</div><div class="mock-stat-label">Elevation Gain</div></div>
+        <div><div class="mock-stat-value">185 ft/mi</div><div class="mock-stat-label">Gain per Mile</div></div>
+        <div><div class="mock-stat-value">1,120–3,460 ft</div><div class="mock-stat-label">Elevation Range</div></div>
+        <div><div class="mock-stat-value">Very Hilly</div><div class="mock-stat-label">Character</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    &copy; 2025 VertHurt &middot; Built for the hills
+  </div>
+
+</div>
+
+<script>
+const form = document.getElementById('waitlist-form');
+const emailInput = document.getElementById('email-input');
+const submitBtn = document.getElementById('submit-btn');
+const feedback = document.getElementById('feedback');
+const socialProof = document.getElementById('social-proof');
+
+// Load waitlist count for social proof
+fetch('/api/waitlist/count')
+  .then(r => r.json())
+  .then(data => {
+    if (data.count > 3) {
+      socialProof.innerHTML = `<strong>${data.count}</strong> runners already on the list`;
+    }
+  })
+  .catch(() => {});
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = emailInput.value.trim();
+  if (!email) return;
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Joining...';
+  feedback.className = 'feedback';
+  feedback.textContent = '';
+
+  try {
+    const res = await fetch('/api/waitlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, source: 'landing_page' })
+    });
+    const data = await res.json();
+
+    if (data.status === 'success') {
+      feedback.className = 'feedback success';
+      feedback.textContent = "You're in! We'll let you know when VertHurt launches.";
+      emailInput.value = '';
+      emailInput.disabled = true;
+      submitBtn.textContent = 'Joined!';
+      // Refresh count
+      fetch('/api/waitlist/count').then(r => r.json()).then(d => {
+        if (d.count > 0) socialProof.innerHTML = `<strong>${d.count}</strong> runners already on the list`;
+      });
+    } else if (data.status === 'already_registered') {
+      feedback.className = 'feedback info';
+      feedback.textContent = "You're already on the list! We'll be in touch soon.";
+      submitBtn.textContent = 'Already Joined';
+    } else {
+      throw new Error(data.error || 'Something went wrong');
+    }
+  } catch (err) {
+    feedback.className = 'feedback error';
+    feedback.textContent = 'Oops, something went wrong. Try again?';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Join Waitlist';
+  }
+});
+</script>
+</body>
+</html>
