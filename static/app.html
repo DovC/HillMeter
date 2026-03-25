@@ -471,341 +471,10 @@
 </div>
 
 <script>
-// ============ GPX PARSING ============
-function parseGPX(xmlString) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xmlString, 'text/xml');
-  const name = doc.querySelector('trk > name')?.textContent || 'Unnamed Route';
-  // Extract date from first trackpoint's <time> element, or metadata <time>
-  const timeEl = doc.querySelector('trkpt > time') || doc.querySelector('metadata > time');
-  let date = null;
-  if (timeEl) {
-    const d = new Date(timeEl.textContent);
-    if (!isNaN(d)) {
-      date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    }
-  }
-  const trkpts = doc.querySelectorAll('trkpt');
-  const points = [];
-  trkpts.forEach(pt => {
-    const lat = parseFloat(pt.getAttribute('lat'));
-    const lon = parseFloat(pt.getAttribute('lon'));
-    const ele = parseFloat(pt.querySelector('ele')?.textContent || '0');
-    points.push({ lat, lon, ele });
-  });
-  return { name, points, date };
-}
+// ============ GPX SCORING (Server-side) ============
+// All scoring logic runs on the server. The client just uploads the file.
 
-// ============ HAVERSINE DISTANCE ============
-function haversine(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const toRad = d => d * Math.PI / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
 
-// ============ SPIKE REMOVAL (Median Filter) ============
-// Median filters excel at removing impulse noise (GPS spikes from pausing)
-// while preserving the true terrain shape.
-function medianFilter(points, windowSize = 5) {
-  const half = Math.floor(windowSize / 2);
-  return points.map((p, i) => {
-    const window = [];
-    for (let j = Math.max(0, i - half); j <= Math.min(points.length - 1, i + half); j++) {
-      window.push(points[j].ele);
-    }
-    window.sort((a, b) => a - b);
-    const median = window[Math.floor(window.length / 2)];
-    return { ...p, ele: median };
-  });
-}
-
-// ============ SMOOTHING ============
-function smoothElevation(points, windowSize = 5) {
-  // First pass: median filter to remove GPS spikes/noise from pauses
-  const despiked = medianFilter(points, 7);
-  // Second pass: moving average to smooth remaining noise
-  const half = Math.floor(windowSize / 2);
-  return despiked.map((p, i) => {
-    let sum = 0, count = 0;
-    for (let j = Math.max(0, i - half); j <= Math.min(despiked.length - 1, i + half); j++) {
-      sum += despiked[j].ele;
-      count++;
-    }
-    return { ...p, ele: sum / count };
-  });
-}
-
-// ============ BUILD SEGMENTS ============
-// Resample elevation at fixed distance intervals (default 50m) to compute
-// gradients over meaningful distances, eliminating noise from point-to-point
-// GPS jitter that creates artificially steep short segments.
-function buildSegments(points, intervalM = 25) {
-  // First, build cumulative distance + elevation arrays
-  const cumDists = [0];
-  for (let i = 1; i < points.length; i++) {
-    cumDists.push(cumDists[i-1] + haversine(points[i-1].lat, points[i-1].lon, points[i].lat, points[i].lon));
-  }
-  const totalDist = cumDists[cumDists.length - 1];
-
-  // Resample at fixed intervals
-  const segments = [];
-  let cumDist = 0;
-  let prevEle = points[0].ele;
-  let ptIdx = 0;
-
-  for (let d = intervalM; d <= totalDist; d += intervalM) {
-    // Find the two bracketing points for distance d
-    while (ptIdx < cumDists.length - 1 && cumDists[ptIdx + 1] < d) ptIdx++;
-    // Interpolate elevation at distance d
-    const frac = (cumDists[ptIdx + 1] - cumDists[ptIdx]) > 0
-      ? (d - cumDists[ptIdx]) / (cumDists[ptIdx + 1] - cumDists[ptIdx])
-      : 0;
-    const ele = points[ptIdx].ele + frac * (points[Math.min(ptIdx + 1, points.length - 1)].ele - points[ptIdx].ele);
-
-    const eleChange = ele - prevEle;
-    const gradient = (eleChange / intervalM) * 100;
-    cumDist = d;
-    segments.push({
-      dist: intervalM,
-      eleChange,
-      gradient,
-      cumDist,
-      startEle: prevEle,
-      endEle: ele
-    });
-    prevEle = ele;
-  }
-
-  // Handle remaining distance
-  const remainDist = totalDist - (segments.length * intervalM);
-  if (remainDist > 5) {
-    const lastEle = points[points.length - 1].ele;
-    const eleChange = lastEle - prevEle;
-    const gradient = (eleChange / remainDist) * 100;
-    segments.push({
-      dist: remainDist,
-      eleChange,
-      gradient,
-      cumDist: totalDist,
-      startEle: prevEle,
-      endEle: lastEle
-    });
-  }
-
-  return segments;
-}
-
-// ============ DEAD-BAND GAIN/LOSS ============
-// Mimics Strava's elevation correction: only register an elevation change
-// when the cumulative change from the last registered point exceeds the
-// threshold. This eliminates GPS wobble that accumulates into phantom gain.
-// Applied ONLY to gain/loss totals — not to the profile or gradient calculations.
-function computeDeadBandGain(points, threshold = 3.0) {
-  if (points.length === 0) return { gain: 0, loss: 0 };
-  let gain = 0, loss = 0;
-  let refEle = points[0].ele;
-  for (let i = 1; i < points.length; i++) {
-    const diff = points[i].ele - refEle;
-    if (diff >= threshold) {
-      gain += diff;
-      refEle = points[i].ele;
-    } else if (diff <= -threshold) {
-      loss += Math.abs(diff);
-      refEle = points[i].ele;
-    }
-  }
-  return { gain, loss };
-}
-
-// ============ COMPUTE HILLINESS ============
-function computeHilliness(gpxData) {
-  const smoothed = smoothElevation(gpxData.points, 5);
-  const segments = buildSegments(smoothed);
-
-  const totalDist = segments.reduce((s, seg) => s + seg.dist, 0);
-  const totalDistKm = totalDist / 1000;
-
-  // Elevation gain/loss via dead-band threshold (matches Strava correction)
-  const deadBand = computeDeadBandGain(smoothed, 3.0);
-  const totalGain = deadBand.gain;
-  const totalLoss = deadBand.loss;
-
-  let minEle = Infinity, maxEle = -Infinity;
-
-  // Gradient bands (for climbing segments only)
-  const bands = {
-    easy: { min: 0, max: 4, dist: 0, label: '0–4%' },
-    moderate: { min: 4, max: 8, dist: 0, label: '4–8%' },
-    hard: { min: 8, max: 12, dist: 0, label: '8–12%' },
-    severe: { min: 12, max: Infinity, dist: 0, label: '12%+' }
-  };
-
-  const bandColors = {
-    easy: '#059669',
-    moderate: '#0891B2',
-    hard: '#D97706',
-    severe: '#DC2626'
-  };
-
-  // Gradient-weighted intensity accumulator
-  let intensitySum = 0;
-  let climbDist = 0;
-
-  // Track individual climbs for continuity scoring
-  let climbs = [];
-  let currentClimb = null;
-
-  // Process segments for gradients, intensity, and bands
-  // (using smoothed data — NOT dead-banded — for accurate gradient shapes)
-  segments.forEach(seg => {
-    if (seg.endEle < minEle) minEle = seg.endEle;
-    if (seg.endEle > maxEle) maxEle = seg.endEle;
-    if (seg.startEle < minEle) minEle = seg.startEle;
-    if (seg.startEle > maxEle) maxEle = seg.startEle;
-
-    // Only consider climbing segments for hilliness
-    if (seg.gradient > 0.5) { // > 0.5% is "climbing"
-      const absGrad = Math.abs(seg.gradient);
-      climbDist += seg.dist;
-
-      // Gradient-weighted intensity: dist × gradient^1.5
-      intensitySum += seg.dist * Math.pow(absGrad, 1.5);
-
-      // Band classification
-      if (absGrad < 4) bands.easy.dist += seg.dist;
-      else if (absGrad < 8) bands.moderate.dist += seg.dist;
-      else if (absGrad < 12) bands.hard.dist += seg.dist;
-      else bands.severe.dist += seg.dist;
-
-      // Track climb continuity
-      if (!currentClimb) {
-        currentClimb = { dist: seg.dist, gain: seg.eleChange };
-      } else {
-        currentClimb.dist += seg.dist;
-        currentClimb.gain += seg.eleChange;
-      }
-    } else {
-      // End of a climb
-      if (currentClimb && currentClimb.dist > 0) {
-        climbs.push(currentClimb);
-      }
-      currentClimb = null;
-    }
-  });
-  // Don't forget last climb
-  if (currentClimb && currentClimb.dist > 0) {
-    climbs.push(currentClimb);
-  }
-
-  // ---- SQUARE ROOT SCALING ----
-  // Sqrt scaling expands differences at the low end while preserving
-  // meaningful separation at the top. Unlike log, routes with very different
-  // gain don't all compress into the 90-100 band.
-  //   score = sqrt(value / ceiling) × 100
-
-  // ---- Component 1: Climb Density — weight from config (default 40%) ----
-  const gainPerKm = totalDistKm > 0 ? totalGain / totalDistKm : 0;
-  // Ceiling: 50 m/km (~264 ft/mi)
-  const densityCeiling = 50;
-  const densityScore = Math.min(100, Math.sqrt(gainPerKm / densityCeiling) * 100);
-
-  // ---- Component 2: Gradient Intensity — weight from config (default 35%) ----
-  const rawIntensity = totalDist > 0 ? intensitySum / totalDist : 0;
-  // Ceiling: 25 (calibrated: Arlington=8.3, Lake Lure=10.4, mountain routes=25+)
-  const intensityCeiling = 25;
-  const intensityScore = Math.min(100, Math.sqrt(rawIntensity / intensityCeiling) * 100);
-
-  // ---- Component 3: Climb Continuity — weight from config (default 25%) ----
-  // Power-sum metric: Σ(climb_length^p) / total_climb_distance, where p = 1.3
-  // This naturally rewards longer climbs disproportionately without arbitrary blending.
-  // Example: one 2km climb scores higher than ten 200m climbs with same total distance.
-  // p=1.3 gives meaningful separation without over-weighting extreme outliers.
-  let continuityScore = 0;
-  const CONTINUITY_EXPONENT = 1.3;
-  if (climbs.length > 0) {
-    const totalClimbDist = climbs.reduce((s, c) => s + c.dist, 0);
-    const powerSum = climbs.reduce((s, c) => s + Math.pow(c.dist, CONTINUITY_EXPONENT), 0);
-    const continuityMetric = powerSum / (totalClimbDist || 1);
-    // Ceiling: 15 (calibrated: rolling=4, Arlington=5.1, Lake Lure=5.4, mountain=10+)
-    const continuityCeiling = 15;
-    continuityScore = Math.min(100, Math.sqrt(continuityMetric / continuityCeiling) * 100);
-  }
-
-  // Debug: log raw values to calibrate ceilings
-  console.log(`[${gpxData.name}] Raw values:`,
-    `gainPerKm=${gainPerKm.toFixed(1)}`,
-    `rawIntensity=${rawIntensity.toFixed(2)}`,
-    `continuityMetric=${climbs.length > 0 ? (climbs.reduce((s,c) => s + Math.pow(c.dist, CONTINUITY_EXPONENT), 0) / climbs.reduce((s,c) => s + c.dist, 0)).toFixed(2) : 0}`,
-    `numClimbs=${climbs.length}`,
-    `climbLengths=[${climbs.map(c => c.dist.toFixed(0)).join(',')}]`
-  );
-  console.log(`[${gpxData.name}] Scores: density=${densityScore.toFixed(1)} intensity=${intensityScore.toFixed(1)} continuity=${continuityScore.toFixed(1)}`);
-
-  // ---- Composite Score (weights from config panel) ----
-  const weights = getWeights();
-  const composite = Math.round(
-    densityScore * weights.density +
-    intensityScore * weights.intensity +
-    continuityScore * weights.continuity
-  );
-
-  // Descriptor — finer-grained labels for better differentiation
-  let descriptor, scoreClass;
-  if (composite < 15) { descriptor = 'Flat'; scoreClass = 'score-flat'; }
-  else if (composite < 30) { descriptor = 'Nearly Flat'; scoreClass = 'score-flat'; }
-  else if (composite < 45) { descriptor = 'Gently Rolling'; scoreClass = 'score-rolling'; }
-  else if (composite < 60) { descriptor = 'Rolling'; scoreClass = 'score-rolling'; }
-  else if (composite < 70) { descriptor = 'Hilly'; scoreClass = 'score-hilly'; }
-  else if (composite < 82) { descriptor = 'Very Hilly'; scoreClass = 'score-hilly'; }
-  else { descriptor = 'Mountainous'; scoreClass = 'score-mountainous'; }
-
-  // Build elevation profile data (sampled for drawing)
-  const profilePoints = [];
-  let cd = 0;
-  for (let i = 0; i < smoothed.length; i++) {
-    if (i > 0) {
-      cd += haversine(smoothed[i-1].lat, smoothed[i-1].lon, smoothed[i].lat, smoothed[i].lon);
-    }
-    profilePoints.push({ dist: cd, ele: smoothed[i].ele });
-  }
-
-  // Subsample profile to ~500 points for performance
-  const step = Math.max(1, Math.floor(profilePoints.length / 500));
-  const sampledProfile = profilePoints.filter((_, i) => i % step === 0);
-  if (sampledProfile[sampledProfile.length - 1] !== profilePoints[profilePoints.length - 1]) {
-    sampledProfile.push(profilePoints[profilePoints.length - 1]);
-  }
-
-  return {
-    name: gpxData.name,
-    date: gpxData.date,
-    composite,
-    descriptor,
-    scoreClass,
-    densityScore: Math.round(densityScore),
-    intensityScore: Math.round(intensityScore),
-    continuityScore: Math.round(continuityScore),
-    totalDist: totalDistKm,
-    totalGain,
-    totalLoss,
-    minEle,
-    maxEle,
-    gainPerKm,
-    bands,
-    bandColors,
-    climbDist,
-    climbs,
-    profile: sampledProfile,
-    segments,
-    // Store raw values so we can recompute with different weights
-    _rawDensityScore: densityScore,
-    _rawIntensityScore: intensityScore,
-    _rawContinuityScore: continuityScore
-  };
-}
 
 // ============ RENDERING ============
 function renderResults(results) {
@@ -1021,10 +690,6 @@ function drawProfile(result, idx, globalMinE, globalMaxE) {
 }
 
 // ============ WEIGHT DEFAULTS ============
-function getWeights() {
-  return { density: 0.40, intensity: 0.35, continuity: 0.25 };
-}
-
 // ============ THUMBNAIL ELEVATION PROFILE ============
 function drawThumbProfile(result, idx, globalMinE, globalMaxE) {
   const canvas = document.getElementById(`thumb-canvas-${idx}`);
@@ -1079,14 +744,21 @@ function drawThumbProfile(result, idx, globalMinE, globalMaxE) {
 const loadedRoutes = [];
 
 function handleFiles(files) {
-  Array.from(files).forEach(file => {
+  Array.from(files).forEach(async file => {
     if (!file.name.endsWith('.gpx')) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      const gpxData = parseGPX(e.target.result);
-      // Use filename (without .gpx extension) as route name
-      gpxData.name = file.name.replace(/\.gpx$/i, '').replace(/_/g, ' ');
-      const result = computeHilliness(gpxData);
+
+    // Upload to server for scoring
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const resp = await fetch('/api/score', { method: 'POST', body: formData });
+      if (!resp.ok) {
+        const err = await resp.json();
+        console.error('Scoring error:', err.error);
+        return;
+      }
+      const result = await resp.json();
       loadedRoutes.push(result);
 
       // Track route analysis
@@ -1101,8 +773,9 @@ function handleFiles(files) {
       });
 
       updateUI();
-    };
-    reader.readAsText(file);
+    } catch (err) {
+      console.error('Failed to score route:', err);
+    }
   });
 }
 

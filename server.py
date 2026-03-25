@@ -1,10 +1,12 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, Response
 from google.cloud import firestore
 from datetime import datetime
+from scoring import compute_score
 import httpx
 import os
+import re
 
 app = FastAPI()
 
@@ -48,6 +50,37 @@ async def waitlist_count():
     """Count with base offset for social proof (no PII exposed)."""
     docs = db.collection("waitlist").get()
     return JSONResponse({"count": WAITLIST_BASE_COUNT + len(docs)})
+
+# ============ SCORING API ============
+
+@app.post("/api/score")
+async def score_route(file: UploadFile = File(...)):
+    """
+    Score a GPX file and return hilliness analysis.
+
+    Accepts a GPX file upload, processes it server-side, and returns
+    the full scoring result including profile data for rendering.
+    """
+    try:
+        if not file.filename.lower().endswith(".gpx"):
+            return JSONResponse({"error": "File must be a .gpx file"}, status_code=400)
+
+        content = await file.read()
+        gpx_xml = content.decode("utf-8")
+
+        # Use filename as route name
+        name = re.sub(r"\.gpx$", "", file.filename, flags=re.IGNORECASE)
+        name = name.replace("_", " ")
+
+        result = compute_score(gpx_xml, name=name, mode="running")
+
+        return JSONResponse(result.to_dict())
+
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception as e:
+        return JSONResponse({"error": f"Failed to process GPX: {str(e)}"}, status_code=500)
+
 
 # PostHog reverse proxy — serves JS assets and forwards events
 @app.api_route("/ingest/{path:path}", methods=["GET", "POST", "OPTIONS"])
