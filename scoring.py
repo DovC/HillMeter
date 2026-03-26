@@ -401,6 +401,11 @@ def compute_score(gpx_xml: str, name: str = None, mode: str = "running") -> Scor
         continuity_metric = power_sum / total_climb_dist if total_climb_dist > 0 else 0
         continuity_score = min(100, math.sqrt(continuity_metric / CONTINUITY_CEILING) * 100)
 
+    # Dampen continuity when there's negligible climbing — continuity is
+    # meaningless if there's nothing to be continuous about.
+    density_dampen = min(1.0, (density_score / 40) ** 0.5)
+    continuity_score = continuity_score * density_dampen
+
     # Composite
     composite = round(
         density_score * WEIGHT_DENSITY
