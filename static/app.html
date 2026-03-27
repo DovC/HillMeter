@@ -499,6 +499,12 @@
   .btn-save { background: #059669; color: white; }
   .btn-save:hover { background: #047857; }
   .btn-save.saved { background: #E5E7EB; color: #6B7280; cursor: default; }
+  .btn-delete-saved {
+    background: none; border: 1px solid #E5E7EB; border-radius: 6px;
+    padding: 6px 8px; cursor: pointer; color: #9CA3AF; display: inline-flex;
+    align-items: center; justify-content: center; transition: all 0.15s;
+  }
+  .btn-delete-saved:hover { color: #EF4444; border-color: #FCA5A5; background: #FEF2F2; }
   .btn-share { background: #2563EB; color: white; }
   .btn-share:hover { background: #1D4ED8; }
 
@@ -558,9 +564,10 @@
   }
   .route-card-stats span { font-weight: 600; color: #374151; }
   .route-card .delete-btn {
-    background: none; border: none; color: #D1D5DB;
-    cursor: pointer; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px;
-    position: absolute; top: 8px; right: 8px;
+    background: none; border: none; color: #9CA3AF;
+    cursor: pointer; padding: 4px; border-radius: 4px;
+    position: absolute; bottom: 10px; right: 10px;
+    display: flex; align-items: center; justify-content: center;
   }
   .route-card .delete-btn:hover { color: #EF4444; background: #FEE2E2; }
   .route-card { position: relative; }
@@ -999,9 +1006,8 @@ async function checkAuth() {
 
 async function handleLogout() {
   await fetch('/api/auth/logout', { method: 'POST' });
-  currentUser = null;
-  updateNavAuth();
   posthog.capture('user_logged_out');
+  window.location.reload();
 }
 
 async function resumePendingAction() {
@@ -1165,6 +1171,9 @@ function renderResults(results) {
       </div>
       <div class="card-actions">
         <button class="btn-save" data-idx="${idx}" onclick="saveRoute(${idx})">Save Route</button>
+        <button class="btn-delete-saved" data-idx="${idx}" onclick="unsaveRoute(${idx})" title="Remove from library" style="display:none;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+        </button>
       </div>
     `;
     compDiv.appendChild(card);
@@ -1198,6 +1207,14 @@ function renderResults(results) {
       </div>
     `;
     profDiv.appendChild(profCard);
+
+    // If this route is already saved, mark the button
+    if (r._savedRouteId) {
+      const saveBtn = card.querySelector('.btn-save');
+      if (saveBtn) { saveBtn.textContent = 'Saved'; saveBtn.classList.add('saved'); saveBtn.disabled = true; }
+      const delBtn = card.querySelector('.btn-delete-saved');
+      if (delBtn) delBtn.style.display = 'inline-flex';
+    }
 
     requestAnimationFrame(() => {
       drawProfile(r, idx, globalMinEle, globalMaxEle);
@@ -1473,17 +1490,45 @@ async function saveRoute(idx) {
     });
 
     const data = await resp.json();
-    if (resp.ok) {
-      btn.textContent = 'Saved';
+    if (resp.ok || data.status === 'already_saved') {
+      btn.textContent = data.status === 'already_saved' ? 'Already Saved' : 'Saved';
       btn.classList.add('saved');
-      posthog.capture('route_saved', { route_name: route.name, score: route.composite });
+      btn.disabled = true;
+      // Store route_id for potential delete, show trash icon
+      const routeId = data.route_id;
+      if (routeId) route._savedRouteId = routeId;
+      const delBtn = document.querySelector(`.btn-delete-saved[data-idx="${idx}"]`);
+      if (delBtn) delBtn.style.display = 'inline-flex';
+      if (data.status !== 'already_saved') {
+        posthog.capture('route_saved', { route_name: route.name, score: route.composite });
+      }
     } else {
-      btn.textContent = data.status === 'already_saved' ? 'Already Saved' : 'Error';
-      if (data.status === 'already_saved') btn.classList.add('saved');
+      btn.textContent = 'Error';
     }
   } catch (err) {
     btn.textContent = 'Save Failed';
     console.error('Save error:', err);
+  }
+}
+
+async function unsaveRoute(idx) {
+  const route = loadedRoutes[idx];
+  const routeId = route?._savedRouteId;
+  if (!routeId) return;
+
+  try {
+    const resp = await fetch(`/api/routes/${routeId}`, { method: 'DELETE' });
+    if (resp.ok) {
+      // Reset save button
+      const btn = document.querySelector(`.btn-save[data-idx="${idx}"]`);
+      if (btn) { btn.textContent = 'Save Route'; btn.classList.remove('saved'); btn.disabled = false; }
+      const delBtn = document.querySelector(`.btn-delete-saved[data-idx="${idx}"]`);
+      if (delBtn) delBtn.style.display = 'none';
+      delete route._savedRouteId;
+      posthog.capture('route_unsaved', { route_name: route.name });
+    }
+  } catch (err) {
+    console.error('Unsave error:', err);
   }
 }
 
@@ -1516,7 +1561,9 @@ async function loadMyRoutes() {
       const distMi = (route.totalDist * 0.621371).toFixed(1);
       const gainFt = (route.totalGain * 3.28084).toFixed(0);
       card.innerHTML = `
-        <button class="delete-btn" onclick="event.stopPropagation(); deleteRoute('${route.id}', '${route.link_id}')" title="Remove from library">&times;</button>
+        <button class="delete-btn" onclick="event.stopPropagation(); deleteRoute('${route.id}', '${route.link_id}')" title="Remove from library">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+        </button>
         <div class="route-card-header">
           <div>
             <div class="route-name">${route.name}</div>
@@ -1546,7 +1593,8 @@ async function viewSavedRoute(routeId) {
     if (!resp.ok) return;
     const route = await resp.json();
 
-    // Switch to score tab and render
+    // Switch to score tab and render — mark as already saved
+    route._savedRouteId = routeId;
     switchTab('score');
     loadedRoutes.length = 0;
     loadedRoutes.push(route);
