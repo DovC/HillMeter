@@ -476,6 +476,98 @@
   }
   .modal-close:hover { color: #6B7280; }
 
+  /* Save/Share buttons on score card */
+  .card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #E5E7EB;
+  }
+  .btn-save, .btn-share {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+  .btn-save { background: #059669; color: white; }
+  .btn-save:hover { background: #047857; }
+  .btn-save.saved { background: #E5E7EB; color: #6B7280; cursor: default; }
+  .btn-share { background: #2563EB; color: white; }
+  .btn-share:hover { background: #1D4ED8; }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 24px;
+    border-bottom: 2px solid #E5E7EB;
+  }
+  .tab {
+    padding: 10px 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6B7280;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    background: none;
+    border-top: none; border-left: none; border-right: none;
+  }
+  .tab.active { color: #2563EB; border-bottom-color: #2563EB; }
+  .tab:hover:not(.active) { color: #374151; }
+
+  /* My Routes */
+  .my-routes-section { display: none; }
+  .my-routes-section.visible { display: block; }
+  .routes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .route-card {
+    background: #FFFFFF;
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+  }
+  .route-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  .route-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .route-card .route-name { font-size: 0.9375rem; font-weight: 600; }
+  .route-card .route-meta { font-size: 0.75rem; color: #9CA3AF; }
+  .route-card .mini-score { font-size: 1.75rem; font-weight: 700; line-height: 1; }
+  .route-card .mini-descriptor { font-size: 0.6875rem; font-weight: 500; }
+  .route-card-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 0.75rem;
+    color: #6B7280;
+    margin-top: 8px;
+  }
+  .route-card-stats span { font-weight: 600; color: #374151; }
+  .route-card .delete-btn {
+    background: none; border: none; color: #D1D5DB;
+    cursor: pointer; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px;
+    position: absolute; top: 8px; right: 8px;
+  }
+  .route-card .delete-btn:hover { color: #EF4444; background: #FEE2E2; }
+  .route-card { position: relative; }
+  .empty-routes {
+    text-align: center; padding: 48px 24px; color: #9CA3AF;
+  }
+
   /* Tooltip on component scores */
   .component {
     position: relative;
@@ -513,6 +605,111 @@
     visibility: visible;
     opacity: 1;
   }
+
+  /* GPX Help link */
+  .gpx-help-link {
+    display: block;
+    text-align: center;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #6b7280;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .gpx-help-link:hover { color: #374151; text-decoration: underline; }
+
+  /* GPX Help Modal */
+  .gpx-help-modal {
+    background: #fff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 460px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+    overflow: hidden;
+  }
+  .gpx-help-header {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid #f3f4f6;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .gpx-help-header h2 { font-size: 1.1rem; font-weight: 700; color: #111827; line-height: 1.3; }
+  .strava-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #fff4f0; border: 1px solid #ffd5c5; border-radius: 6px;
+    padding: 3px 8px; margin-bottom: 6px;
+  }
+  .strava-dot { width: 8px; height: 8px; border-radius: 50%; background: #fc4c02; }
+  .strava-badge span { font-size: 11px; font-weight: 600; color: #c73d00; letter-spacing: 0.04em; }
+  .gpx-help-close {
+    background: #f3f4f6; border: none; border-radius: 8px;
+    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #9ca3af; font-size: 18px; transition: background 0.15s;
+  }
+  .gpx-help-close:hover { background: #e5e7eb; color: #374151; }
+  .gpx-help-body { overflow-y: auto; padding: 18px 20px; flex: 1; }
+  .gpx-help-intro { font-size: 0.875rem; color: #6b7280; line-height: 1.55; margin-bottom: 18px; }
+  .gpx-steps { display: flex; flex-direction: column; }
+  .gpx-step { display: flex; gap: 12px; padding-bottom: 18px; position: relative; }
+  .gpx-step:not(:last-child)::before {
+    content: ''; position: absolute; left: 13px; top: 28px; bottom: 0; width: 2px; background: #e5e7eb;
+  }
+  .gpx-step-num {
+    flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+    background: #111827; color: #fff; font-size: 0.75rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; position: relative; z-index: 1;
+  }
+  .gpx-step-body { flex: 1; padding-top: 4px; }
+  .gpx-step-title { font-size: 0.9rem; font-weight: 600; color: #111827; margin-bottom: 3px; }
+  .gpx-step-desc { font-size: 0.825rem; color: #6b7280; line-height: 1.5; margin-bottom: 10px; }
+  .gpx-mockup { border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden; margin-bottom: 4px; }
+  .gpx-strava-toolbar {
+    padding: 10px 14px; display: flex; align-items: center; gap: 6px; background: #fff;
+  }
+  .gpx-toolbar-label { font-size: 10px; color: #9ca3af; margin-right: auto; text-transform: uppercase; font-weight: 500; }
+  .gpx-tb-btn {
+    border: 1px solid #e5e7eb; background: #fff; border-radius: 6px;
+    padding: 5px 10px; font-size: 12px; color: #374151;
+  }
+  .gpx-tb-highlighted {
+    background: #111827; color: #fff; border-color: #111827;
+    font-weight: 700; box-shadow: 0 0 0 3px rgba(17,24,39,0.15);
+  }
+  .gpx-dropdown { background: #fff; }
+  .gpx-dd-item {
+    padding: 10px 14px; font-size: 0.825rem; color: #374151;
+    border-bottom: 1px solid #f9fafb; display: flex; align-items: center; gap: 8px;
+  }
+  .gpx-dd-item:last-child { border-bottom: none; }
+  .gpx-dd-muted { color: #9ca3af; font-size: 0.78rem; }
+  .gpx-dd-export {
+    background: #f0fdf4; color: #15803d; font-weight: 600;
+    border-left: 3px solid #22c55e; border-bottom: 1px solid #dcfce7;
+  }
+  .gpx-dd-icon {
+    width: 18px; height: 18px; background: #22c55e; border-radius: 4px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #fff;
+  }
+  .gpx-dd-tag {
+    margin-left: auto; background: #dcfce7; color: #15803d;
+    font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 4px;
+  }
+  .gpx-help-footer {
+    padding: 12px 20px; border-top: 1px solid #f3f4f6;
+    display: flex; align-items: center; justify-content: space-between; background: #fafafa;
+  }
+  .gpx-help-hint { font-size: 0.75rem; color: #9ca3af; }
+  .gpx-help-got-it {
+    padding: 8px 20px; background: #111827; color: #fff; border: none;
+    border-radius: 8px; font-size: 0.85rem; font-weight: 500; cursor: pointer;
+  }
+  .gpx-help-got-it:hover { background: #374151; }
 </style>
 </head>
 <body>
@@ -577,17 +774,101 @@
     </div>
   </div>
 
-  <div class="dropzone" id="dropzone">
-    <div class="dropzone-icon">&#x26F0;</div>
-    <div class="dropzone-text"><strong>Drop GPX files here</strong> or click to browse<br>Supports multiple files for comparison</div>
+  <!-- GPX Help Modal -->
+  <div class="modal-overlay" id="gpxHelpModal">
+    <div class="gpx-help-modal" role="dialog" aria-modal="true">
+      <div class="gpx-help-header">
+        <div>
+          <div class="strava-badge"><div class="strava-dot"></div><span>Strava → VertHurt</span></div>
+          <h2>How to export a GPX file</h2>
+        </div>
+        <button class="gpx-help-close" onclick="document.getElementById('gpxHelpModal').classList.remove('visible')" aria-label="Close">&times;</button>
+      </div>
+      <div class="gpx-help-body">
+        <p class="gpx-help-intro">A GPX file contains your route data. Follow these steps to export one from any Strava activity — it takes about 30 seconds.</p>
+        <div class="gpx-steps">
+          <div class="gpx-step">
+            <div class="gpx-step-num">1</div>
+            <div class="gpx-step-body">
+              <div class="gpx-step-title">Open an activity on Strava</div>
+              <p class="gpx-step-desc">Go to <strong>strava.com</strong> and click on any activity — a run, ride, or any workout with a route.</p>
+            </div>
+          </div>
+          <div class="gpx-step">
+            <div class="gpx-step-num">2</div>
+            <div class="gpx-step-body">
+              <div class="gpx-step-title">Click the <strong>•••</strong> menu</div>
+              <p class="gpx-step-desc">On the activity page, find the <strong>•••</strong> button (next to the pencil icon).</p>
+              <div class="gpx-mockup">
+                <div class="gpx-strava-toolbar">
+                  <span class="gpx-toolbar-label">Activity</span>
+                  <span class="gpx-tb-btn">✏️ Edit</span>
+                  <span class="gpx-tb-btn gpx-tb-highlighted">•••</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gpx-step">
+            <div class="gpx-step-num">3</div>
+            <div class="gpx-step-body">
+              <div class="gpx-step-title">Select <strong>Export GPX</strong></div>
+              <p class="gpx-step-desc">From the dropdown, tap <strong>Export GPX</strong>. The file downloads to your device automatically.</p>
+              <div class="gpx-mockup">
+                <div class="gpx-dropdown">
+                  <div class="gpx-dd-item gpx-dd-muted">Correct Distance</div>
+                  <div class="gpx-dd-item gpx-dd-muted">Create Segment</div>
+                  <div class="gpx-dd-item gpx-dd-export">
+                    <span class="gpx-dd-icon">⬇</span>
+                    Export GPX
+                    <span class="gpx-dd-tag">Tap this</span>
+                  </div>
+                  <div class="gpx-dd-item gpx-dd-muted">Export Original</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="gpx-step">
+            <div class="gpx-step-num">4</div>
+            <div class="gpx-step-body">
+              <div class="gpx-step-title">Upload it to VertHurt</div>
+              <p class="gpx-step-desc">Drag & drop your GPX file into the box above, or click to browse.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="gpx-help-footer">
+        <span class="gpx-help-hint">Works with Garmin, Apple Watch, COROS & more</span>
+        <button class="gpx-help-got-it" onclick="document.getElementById('gpxHelpModal').classList.remove('visible')">Got it</button>
+      </div>
+    </div>
   </div>
-  <input type="file" id="fileInput" accept=".gpx" multiple>
 
-  <div class="loaded-files" id="loadedFiles"></div>
+  <!-- Tabs (My Routes only visible when authenticated) -->
+  <div class="tabs" id="tabBar" style="display:none">
+    <button class="tab active" data-tab="score" id="tabScore">Score a Route</button>
+    <button class="tab" data-tab="myroutes" id="tabMyRoutes">My Routes</button>
+  </div>
 
-  <div class="results-section" id="results">
-    <div class="comparison" id="comparison"></div>
-    <div id="profiles"></div>
+  <!-- Score tab content -->
+  <div id="scoreTab">
+    <div class="dropzone" id="dropzone">
+      <div class="dropzone-icon">&#x26F0;</div>
+      <div class="dropzone-text"><strong>Drop GPX files here</strong> or click to browse<br>Supports multiple files for comparison</div>
+    </div>
+    <input type="file" id="fileInput" accept=".gpx" multiple>
+    <a href="#" class="gpx-help-link" onclick="event.preventDefault(); document.getElementById('gpxHelpModal').classList.add('visible');">What the heck's a GPX?</a>
+
+    <div class="loaded-files" id="loadedFiles"></div>
+
+    <div class="results-section" id="results">
+      <div class="comparison" id="comparison"></div>
+      <div id="profiles"></div>
+    </div>
+  </div>
+
+  <!-- My Routes tab content -->
+  <div class="my-routes-section" id="myRoutesTab">
+    <div class="routes-grid" id="routesGrid"></div>
   </div>
 
   <div class="methodology">
@@ -648,9 +929,24 @@ function shouldGate(action) {
 }
 
 function showGateModal(pendingAction) {
-  // Save pending action for post-auth resumption
+  // Save pending action + route data for post-auth resumption
   if (pendingAction) {
-    sessionStorage.setItem('verthurt_pending_action', JSON.stringify(pendingAction));
+    // Stash scored routes so they survive the OAuth redirect
+    // Strip heavy profile/bandColors data to stay within sessionStorage limits
+    if (loadedRoutes.length > 0) {
+      pendingAction.routes = loadedRoutes.map(r => {
+        const slim = {...r};
+        delete slim.profile;      // thousands of points — too large
+        delete slim.bandColors;   // can be re-derived
+        return slim;
+      });
+      pendingAction.gpxRaw = rawGpxStore;
+    }
+    try {
+      localStorage.setItem('verthurt_pending_action', JSON.stringify(pendingAction));
+    } catch (e) {
+      console.error('Failed to stash pending action:', e);
+    }
   }
   document.getElementById('gateModal').classList.add('visible');
   posthog.capture('gate_modal_shown', { trigger: pendingAction?.type || 'unknown', score_count: getScoreCount() });
@@ -690,6 +986,7 @@ async function checkAuth() {
         // Clear score count for authenticated users
         localStorage.removeItem('verthurt_score_count');
         updateNavAuth();
+        updateTabs();
         posthog.capture('auth_session_restored', { strava_id: currentUser.strava_id });
         // Check for pending action
         resumePendingAction();
@@ -707,18 +1004,65 @@ async function handleLogout() {
   posthog.capture('user_logged_out');
 }
 
-function resumePendingAction() {
-  const pending = sessionStorage.getItem('verthurt_pending_action');
+async function resumePendingAction() {
+  const pending = localStorage.getItem('verthurt_pending_action');
   if (!pending) return;
-  sessionStorage.removeItem('verthurt_pending_action');
+  localStorage.removeItem('verthurt_pending_action');
   try {
     const action = JSON.parse(pending);
-    if (action.type === 'score' && action.files) {
-      // Re-trigger file scoring — files are gone after redirect, user needs to re-drop
-      // But we can show a message
+
+    if (action.type === 'save' && action.routes && action.routes.length > 0) {
+      const saveIdx = action.idx || 0;
+      const route = action.routes[saveIdx];
+      const gpxRaw = action.gpxRaw ? (action.gpxRaw[saveIdx] || '') : '';
+
+      // Re-score from raw GPX if available (restores full data including profile)
+      if (gpxRaw) {
+        const formData = new FormData();
+        formData.append('file', new Blob([gpxRaw], { type: 'application/gpx+xml' }), (route.name || 'route') + '.gpx');
+        try {
+          const scoreResp = await fetch('/api/score', { method: 'POST', body: formData });
+          if (scoreResp.ok) {
+            const fullRoute = await scoreResp.json();
+            loadedRoutes = [fullRoute];
+            rawGpxStore = { 0: gpxRaw };
+            renderResults(loadedRoutes);
+
+            // Now save it
+            const saveResp = await fetch('/api/routes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ score_data: fullRoute, gpx_raw: gpxRaw }),
+            });
+            if (saveResp.ok) {
+              posthog.capture('route_saved', { route_name: fullRoute.name, score: fullRoute.composite, source: 'post_auth_resume' });
+              // Mark the save button as saved
+              const btn = document.querySelector('.btn-save[data-idx="0"]');
+              if (btn) { btn.textContent = 'Saved'; btn.classList.add('saved'); btn.disabled = true; }
+            }
+          }
+        } catch (e) {
+          console.error('Re-score after auth failed:', e);
+        }
+      } else {
+        // No raw GPX — just save the slim data
+        try {
+          const resp = await fetch('/api/routes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ score_data: route, gpx_raw: '' }),
+          });
+          if (resp.ok) {
+            posthog.capture('route_saved', { route_name: route.name, score: route.composite, source: 'post_auth_resume' });
+          }
+        } catch (e) {
+          console.error('Auto-save after auth failed:', e);
+        }
+      }
     }
-    // For now, just let them continue — they're authenticated
-  } catch (e) {}
+  } catch (e) {
+    console.error('Resume pending action error:', e);
+  }
 }
 
 // Init auth check on load
@@ -728,6 +1072,10 @@ checkAuth();
 document.getElementById('gateClose').addEventListener('click', hideGateModal);
 document.getElementById('gateModal').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) hideGateModal();
+});
+
+document.getElementById('gpxHelpModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) document.getElementById('gpxHelpModal').classList.remove('visible');
 });
 
 // ============ GPX SCORING (Server-side) ============
@@ -814,6 +1162,9 @@ function renderResults(results) {
         <div class="gradient-bar-label">Climb Gradient Distribution</div>
         <div class="gradient-bar" id="gradbar-${idx}"></div>
         <div class="gradient-legend" id="gradlegend-${idx}"></div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-save" data-idx="${idx}" onclick="saveRoute(${idx})">Save Route</button>
       </div>
     `;
     compDiv.appendChild(card);
@@ -1000,7 +1351,7 @@ function drawThumbProfile(result, idx, globalMinE, globalMaxE) {
 }
 
 // ============ FILE HANDLING ============
-const loadedRoutes = [];
+let loadedRoutes = [];
 
 function handleFiles(files) {
   const gpxFiles = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.gpx'));
@@ -1026,6 +1377,9 @@ function handleFiles(files) {
       return;
     }
 
+    // Read raw GPX for saving later
+    const rawGpx = await file.text();
+
     // Upload to server for scoring
     const formData = new FormData();
     formData.append('file', file);
@@ -1038,7 +1392,9 @@ function handleFiles(files) {
         return;
       }
       const result = await resp.json();
+      const routeIdx = loadedRoutes.length;
       loadedRoutes.push(result);
+      rawGpxStore[routeIdx] = rawGpx;
 
       // Increment score count for anonymous users
       if (!isAuthenticated()) {
@@ -1090,6 +1446,152 @@ function updateUI() {
   }
 }
 
+// ============ SAVE ROUTE ============
+// Store raw GPX content alongside scored results for saving
+let rawGpxStore = {};  // keyed by route index
+
+async function saveRoute(idx) {
+  if (shouldGate('save')) {
+    showGateModal({ type: 'save', idx: idx });
+    posthog.capture('gate_triggered', { reason: 'save', score_count: getScoreCount() });
+    return;
+  }
+
+  const route = loadedRoutes[idx];
+  const btn = document.querySelector(`.btn-save[data-idx="${idx}"]`);
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch('/api/routes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        score_data: route,
+        gpx_raw: rawGpxStore[idx] || '',
+      }),
+    });
+
+    const data = await resp.json();
+    if (resp.ok) {
+      btn.textContent = 'Saved';
+      btn.classList.add('saved');
+      posthog.capture('route_saved', { route_name: route.name, score: route.composite });
+    } else {
+      btn.textContent = data.status === 'already_saved' ? 'Already Saved' : 'Error';
+      if (data.status === 'already_saved') btn.classList.add('saved');
+    }
+  } catch (err) {
+    btn.textContent = 'Save Failed';
+    console.error('Save error:', err);
+  }
+}
+
+// ============ MY ROUTES ============
+async function loadMyRoutes() {
+  const grid = document.getElementById('routesGrid');
+  grid.innerHTML = '<div class="empty-routes"><p>Loading...</p></div>';
+
+  try {
+    const resp = await fetch('/api/routes');
+    if (resp.status === 401) {
+      grid.innerHTML = '<div class="empty-routes"><p>Sign in with Strava to save and view your routes.</p></div>';
+      return;
+    }
+    if (!resp.ok) {
+      grid.innerHTML = '<div class="empty-routes"><p>Failed to load routes. Please try again.</p></div>';
+      return;
+    }
+
+    const data = await resp.json();
+    if (data.routes.length === 0) {
+      grid.innerHTML = '<div class="empty-routes"><p>No saved routes yet.</p><p>Score a route and hit Save to start your library.</p></div>';
+      return;
+    }
+
+    grid.innerHTML = '';
+    data.routes.forEach(route => {
+      const card = document.createElement('div');
+      card.className = 'route-card';
+      const distMi = (route.totalDist * 0.621371).toFixed(1);
+      const gainFt = (route.totalGain * 3.28084).toFixed(0);
+      card.innerHTML = `
+        <button class="delete-btn" onclick="event.stopPropagation(); deleteRoute('${route.id}', '${route.link_id}')" title="Remove from library">&times;</button>
+        <div class="route-card-header">
+          <div>
+            <div class="route-name">${route.name}</div>
+            <div class="route-meta">${distMi} mi${route.date ? ' · ' + route.date : ''}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="mini-score ${route.scoreClass}">${route.composite}</div>
+            <div class="mini-descriptor ${route.scoreClass}">${route.descriptor}</div>
+          </div>
+        </div>
+        <div class="route-card-stats">
+          <div>Gain: <span>${gainFt} ft</span></div>
+        </div>
+      `;
+      card.addEventListener('click', () => viewSavedRoute(route.id));
+      grid.appendChild(card);
+    });
+  } catch (err) {
+    grid.innerHTML = '<div class="empty-routes"><p>Failed to load routes</p></div>';
+    console.error('Load routes error:', err);
+  }
+}
+
+async function viewSavedRoute(routeId) {
+  try {
+    const resp = await fetch(`/api/routes/${routeId}`);
+    if (!resp.ok) return;
+    const route = await resp.json();
+
+    // Switch to score tab and render
+    switchTab('score');
+    loadedRoutes.length = 0;
+    loadedRoutes.push(route);
+    updateUI();
+  } catch (err) {
+    console.error('View route error:', err);
+  }
+}
+
+async function deleteRoute(routeId, linkId) {
+  if (!confirm('Remove this route from your library?')) return;
+
+  try {
+    await fetch(`/api/routes/${routeId}`, { method: 'DELETE' });
+    posthog.capture('route_deleted', { route_id: routeId });
+    loadMyRoutes();  // Refresh
+  } catch (err) {
+    console.error('Delete error:', err);
+  }
+}
+
+// ============ TABS ============
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
+
+  if (tab === 'score') {
+    document.getElementById('scoreTab').style.display = '';
+    document.getElementById('myRoutesTab').classList.remove('visible');
+  } else {
+    document.getElementById('scoreTab').style.display = 'none';
+    document.getElementById('myRoutesTab').classList.add('visible');
+    loadMyRoutes();
+  }
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+});
+
+// Show tabs when authenticated
+function updateTabs() {
+  document.getElementById('tabBar').style.display = isAuthenticated() ? 'flex' : 'none';
+}
+
 // ============ EVENT LISTENERS ============
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
@@ -1116,5 +1618,11 @@ window.addEventListener('resize', () => {
   }
 });
 </script>
+
+<footer style="text-align:center; padding:2rem 1rem; margin-top:3rem; border-top:1px solid #e5e7eb; color:#9ca3af; font-size:0.8rem;">
+  <a href="/terms.html" style="color:#9ca3af; text-decoration:none; margin:0 0.75rem;">Terms & Conditions</a>
+  <span style="color:#d1d5db;">|</span>
+  <a href="/privacy.html" style="color:#9ca3af; text-decoration:none; margin:0 0.75rem;">Privacy Policy</a>
+</footer>
 </body>
 </html>

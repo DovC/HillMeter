@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How to Download a GPX from Strava | VertHurt Help</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* Page backdrop — simulates modal overlay */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: rgba(17, 24, 39, 0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Modal ── */
+    .modal {
+      background: #ffffff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 460px;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    .modal-header {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid #f3f4f6;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .strava-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #fff4f0;
+      border: 1px solid #ffd5c5;
+      border-radius: 6px;
+      padding: 3px 8px;
+      margin-bottom: 6px;
+    }
+
+    .strava-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #fc4c02;
+    }
+
+    .strava-badge span {
+      font-size: 11px;
+      font-weight: 600;
+      color: #c73d00;
+      letter-spacing: 0.04em;
+    }
+
+    .modal-header h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1.3;
+    }
+
+    .close-btn {
+      background: #f3f4f6;
+      border: none;
+      border-radius: 8px;
+      width: 30px; height: 30px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      color: #9ca3af;
+      font-size: 18px;
+      line-height: 1;
+      transition: background 0.15s, color 0.15s;
+    }
+    .close-btn:hover { background: #e5e7eb; color: #374151; }
+
+    /* ── Body ── */
+    .modal-body {
+      overflow-y: auto;
+      padding: 18px 20px;
+      flex: 1;
+    }
+
+    .intro {
+      font-size: 0.875rem;
+      color: #6b7280;
+      line-height: 1.55;
+      margin-bottom: 18px;
+    }
+
+    /* ── Steps ── */
+    .steps { display: flex; flex-direction: column; }
+
+    .step {
+      display: flex;
+      gap: 12px;
+      padding-bottom: 18px;
+      position: relative;
+    }
+
+    .step:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: 13px;
+      top: 28px;
+      bottom: 0;
+      width: 2px;
+      background: #e5e7eb;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: #111827;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-body { flex: 1; padding-top: 4px; }
+
+    .step-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 3px;
+      line-height: 1.3;
+    }
+
+    .step-desc {
+      font-size: 0.825rem;
+      color: #6b7280;
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+
+    /* ── UI Mockups ── */
+    .mockup {
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    /* Strava activity toolbar mockup (step 2) */
+    .strava-toolbar {
+      background: #fff;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .strava-toolbar-label {
+      font-size: 10px;
+      color: #9ca3af;
+      margin-right: auto;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    .tb-btn {
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      color: #374151;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 4px;
+    }
+
+    .tb-btn.pencil { color: #6b7280; }
+
+    .tb-btn.dots {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #374151;
+      background: #f3f4f6;
+      border-color: #d1d5db;
+      padding: 4px 9px;
+    }
+
+    .tb-btn.dots.highlighted {
+      background: #111827;
+      color: #fff;
+      border-color: #111827;
+      box-shadow: 0 0 0 3px rgba(17,24,39,0.15);
+    }
+
+    .tap-hint {
+      background: #f9fafb;
+      padding: 6px 14px;
+      font-size: 11px;
+      color: #9ca3af;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .tap-hint svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+    /* Strava dropdown mockup (step 3) */
+    .strava-dropdown {
+      background: #fff;
+    }
+
+    .dropdown-item {
+      padding: 10px 14px;
+      font-size: 0.825rem;
+      color: #374151;
+      border-bottom: 1px solid #f9fafb;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dropdown-item:last-child { border-bottom: none; }
+
+    .dropdown-item.muted { color: #9ca3af; font-size: 0.78rem; }
+
+    .dropdown-item.export-gpx {
+      background: #f0fdf4;
+      color: #15803d;
+      font-weight: 600;
+      border-left: 3px solid #22c55e;
+      border-bottom: 1px solid #dcfce7;
+    }
+
+    .dropdown-item.export-gpx .item-icon {
+      width: 18px; height: 18px;
+      background: #22c55e;
+      border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .dropdown-item .item-icon svg { width: 11px; height: 11px; }
+
+    .dropdown-tag {
+      margin-left: auto;
+      background: #dcfce7;
+      color: #15803d;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    /* Upload zone mockup (step 4) */
+    .upload-zone {
+      margin: 0;
+      padding: 20px 16px;
+      border: 2px dashed #d1d5db;
+      border-radius: 8px;
+      background: #fafafa;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .upload-zone svg { width: 28px; height: 28px; color: #9ca3af; }
+
+    .upload-zone .uz-title {
+      font-size: 0.825rem;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .upload-zone .uz-sub {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+
+    .uz-btn {
+      margin-top: 4px;
+      padding: 6px 14px;
+      background: #111827;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    /* ── Footer ── */
+    .modal-footer {
+      padding: 12px 20px;
+      border-top: 1px solid #f3f4f6;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: #fafafa;
+    }
+
+    .footer-hint {
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+
+    .footer-hint a { color: #6b7280; text-decoration: underline; }
+
+    .btn-primary {
+      padding: 8px 20px;
+      background: #111827;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: #374151; }
+  </style>
+</head>
+<body>
+
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+
+    <!-- Header -->
+    <div class="modal-header">
+      <div>
+        <div class="strava-badge">
+          <div class="strava-dot"></div>
+          <span>Strava → VertHurt</span>
+        </div>
+        <h2 id="modal-title">How to export a GPX file</h2>
+      </div>
+      <button class="close-btn" aria-label="Close">&times;</button>
+    </div>
+
+    <!-- Content -->
+    <div class="modal-body">
+
+      <p class="intro">A GPX file contains your route data. Follow these steps to export one from any Strava activity — it takes about 30 seconds.</p>
+
+      <div class="steps">
+
+        <!-- Step 1 -->
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">Open an activity on Strava</div>
+            <p class="step-desc">Go to <strong>strava.com</strong> and click on any activity you want to export — a run, ride, or any workout with a route.</p>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Click the <strong>•••</strong> menu</div>
+            <p class="step-desc">On the activity page, find the <strong>•••</strong> button (next to the pencil icon) and click it.</p>
+            <div class="mockup">
+              <div class="strava-toolbar">
+                <span class="strava-toolbar-label">Activity</span>
+                <button class="tb-btn pencil" aria-label="Edit">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  Edit
+                </button>
+                <button class="tb-btn dots highlighted" aria-label="More options">•••</button>
+              </div>
+              <div class="tap-hint">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><path d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Tap the <strong style="color:#374151">•••</strong> button to open the menu
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Select <strong>Export GPX</strong></div>
+            <p class="step-desc">From the dropdown, tap <strong>Export GPX</strong>. The file will download to your device automatically.</p>
+            <div class="mockup">
+              <div class="strava-dropdown">
+                <div class="dropdown-item muted">Correct Distance</div>
+                <div class="dropdown-item muted">Create Segment</div>
+                <div class="dropdown-item export-gpx">
+                  <div class="item-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </div>
+                  Export GPX
+                  <span class="dropdown-tag">Tap this</span>
+                </div>
+                <div class="dropdown-item muted">Export Original</div>
+                <div class="dropdown-item muted">Report Activity</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Upload it to VertHurt</div>
+            <p class="step-desc">Drag &amp; drop your GPX file below, or click <strong>Browse files</strong> to find it.</p>
+            <div class="upload-zone">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="uz-title">Drop your .gpx file here</span>
+              <span class="uz-sub">or</span>
+              <button class="uz-btn">Browse files</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <p class="footer-hint">Need help? <a href="mailto:support@verthurt.com">Contact us</a></p>
+      <button class="btn-primary">Got it</button>
+    </div>
+
+  </div>
+
+</body>
+</html>
