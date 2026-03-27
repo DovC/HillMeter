@@ -1,9 +1,13 @@
+from dotenv import load_dotenv
+load_dotenv()  # Load .env BEFORE other imports that read env vars
+
 from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, Response
 from google.cloud import firestore
 from datetime import datetime
 from scoring import compute_score
+from auth import strava_login, strava_callback, get_me, logout, get_current_user
 import httpx
 import os
 import re
@@ -50,6 +54,13 @@ async def waitlist_count():
     """Count with base offset for social proof (no PII exposed)."""
     docs = db.collection("waitlist").get()
     return JSONResponse({"count": WAITLIST_BASE_COUNT + len(docs)})
+
+# ============ AUTH API ============
+
+app.add_api_route("/api/auth/strava", strava_login, methods=["GET"])
+app.add_api_route("/api/auth/strava/callback", strava_callback, methods=["GET"])
+app.add_api_route("/api/auth/me", get_me, methods=["GET"])
+app.add_api_route("/api/auth/logout", logout, methods=["POST"])
 
 # ============ SCORING API ============
 

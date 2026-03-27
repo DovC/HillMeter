@@ -7,6 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY server.py .
 COPY scoring.py .
+COPY auth.py .
 COPY static/ static/
 
 EXPOSE 8080

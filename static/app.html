@@ -352,6 +352,130 @@
     display: block;
   }
 
+  /* Navigation bar */
+  .navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  .nav-auth {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .strava-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #FC4C02;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .strava-btn:hover { background: #E34402; }
+  .strava-btn svg { width: 18px; height: 18px; }
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem;
+    color: #374151;
+  }
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  .user-name { font-weight: 500; }
+  .logout-btn {
+    background: none;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    color: #6B7280;
+    cursor: pointer;
+  }
+  .logout-btn:hover { background: #F3F4F6; }
+
+  /* Gate modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+  }
+  .modal-overlay.visible {
+    display: flex;
+  }
+  .modal {
+    background: white;
+    border-radius: 16px;
+    padding: 40px;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .modal h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1F2937;
+    margin-bottom: 8px;
+  }
+  .modal p {
+    font-size: 0.9375rem;
+    color: #6B7280;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+  .modal .strava-btn {
+    font-size: 1rem;
+    padding: 12px 32px;
+    width: 100%;
+    justify-content: center;
+  }
+  .modal .value-props {
+    text-align: left;
+    margin-bottom: 24px;
+  }
+  .modal .value-props li {
+    font-size: 0.875rem;
+    color: #374151;
+    margin-bottom: 8px;
+    list-style: none;
+    padding-left: 24px;
+    position: relative;
+  }
+  .modal .value-props li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: #059669;
+    font-weight: 700;
+  }
+  .modal-close {
+    display: block;
+    margin-top: 16px;
+    font-size: 0.8125rem;
+    color: #9CA3AF;
+    cursor: pointer;
+    background: none;
+    border: none;
+  }
+  .modal-close:hover { color: #6B7280; }
+
   /* Tooltip on component scores */
   .component {
     position: relative;
@@ -393,38 +517,65 @@
 </head>
 <body>
 <div class="container">
-  <div class="logo-container">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48" width="200" height="48" class="site-logo">
-      <defs>
-        <linearGradient id="vhGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stop-color="#059669"/>
-          <stop offset="50%" stop-color="#10B981"/>
-          <stop offset="100%" stop-color="#2563EB"/>
-        </linearGradient>
-        <linearGradient id="vhGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#059669"/>
-          <stop offset="100%" stop-color="#2563EB"/>
-        </linearGradient>
-        <clipPath id="textClip">
-          <text x="0" y="36" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="38" font-weight="900" letter-spacing="-1.5">VERTHURT</text>
-        </clipPath>
-      </defs>
-      <g clip-path="url(#textClip)">
-        <rect x="0" y="0" width="200" height="48" fill="url(#vhGrad)"/>
-        <polygon points="0,48 12,38 24,42 38,18 52,32 60,28 72,8 84,30 96,24 108,48" fill="rgba(255,255,255,0.15)"/>
-        <polygon points="96,48 108,38 118,42 128,14 140,28 150,22 162,6 174,26 186,20 200,48" fill="rgba(255,255,255,0.12)"/>
-      </g>
-      <polyline points="0,40 18,40 24,40 30,38 36,40 54,40 60,40 64,36 68,44 72,20 76,42 80,38 84,40 108,40 114,40 118,36 122,44 126,16 130,44 134,36 138,40 168,40 174,40 178,38 182,40 200,40" fill="none" stroke="url(#vhGrad2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
-      <g transform="translate(88, 3)" opacity="0.9">
-        <polyline points="0,12 6,2 9,7 15,0 21,8 24,5" fill="none" stroke="url(#vhGrad2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-      </g>
-      <text x="0" y="36" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="38" font-weight="900" letter-spacing="-1.5" fill="url(#vhGrad)">VERT<tspan fill="#2563EB" opacity="0.95">HURT</tspan></text>
-      <line x1="103" y1="8" x2="97" y2="40" stroke="url(#vhGrad2)" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
-      <rect x="0" y="44" width="92" height="3" rx="1.5" fill="url(#vhGrad)" opacity="0.8"/>
-      <rect x="100" y="44" width="88" height="3" rx="1.5" fill="#2563EB" opacity="0.6"/>
-    </svg>
+  <div class="navbar">
+    <div class="logo-container">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 48" width="200" height="48" class="site-logo">
+        <defs>
+          <linearGradient id="vhGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#059669"/>
+            <stop offset="50%" stop-color="#10B981"/>
+            <stop offset="100%" stop-color="#2563EB"/>
+          </linearGradient>
+          <linearGradient id="vhGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#059669"/>
+            <stop offset="100%" stop-color="#2563EB"/>
+          </linearGradient>
+          <clipPath id="textClip">
+            <text x="0" y="36" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="38" font-weight="900" letter-spacing="-1.5">VERTHURT</text>
+          </clipPath>
+        </defs>
+        <g clip-path="url(#textClip)">
+          <rect x="0" y="0" width="200" height="48" fill="url(#vhGrad)"/>
+          <polygon points="0,48 12,38 24,42 38,18 52,32 60,28 72,8 84,30 96,24 108,48" fill="rgba(255,255,255,0.15)"/>
+          <polygon points="96,48 108,38 118,42 128,14 140,28 150,22 162,6 174,26 186,20 200,48" fill="rgba(255,255,255,0.12)"/>
+        </g>
+        <polyline points="0,40 18,40 24,40 30,38 36,40 54,40 60,40 64,36 68,44 72,20 76,42 80,38 84,40 108,40 114,40 118,36 122,44 126,16 130,44 134,36 138,40 168,40 174,40 178,38 182,40 200,40" fill="none" stroke="url(#vhGrad2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+        <g transform="translate(88, 3)" opacity="0.9">
+          <polyline points="0,12 6,2 9,7 15,0 21,8 24,5" fill="none" stroke="url(#vhGrad2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <text x="0" y="36" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="38" font-weight="900" letter-spacing="-1.5" fill="url(#vhGrad)">VERT<tspan fill="#2563EB" opacity="0.95">HURT</tspan></text>
+        <line x1="103" y1="8" x2="97" y2="40" stroke="url(#vhGrad2)" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+        <rect x="0" y="44" width="92" height="3" rx="1.5" fill="url(#vhGrad)" opacity="0.8"/>
+        <rect x="100" y="44" width="88" height="3" rx="1.5" fill="#2563EB" opacity="0.6"/>
+      </svg>
+    </div>
+    <div class="nav-auth" id="navAuth">
+      <a href="/api/auth/strava" class="strava-btn">
+        <svg viewBox="0 0 24 24" fill="white"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+        Sign in with Strava
+      </a>
+    </div>
   </div>
   <p class="subtitle">Drop a GPX file to score how hilly your route really is.</p>
+
+  <!-- Gate Modal -->
+  <div class="modal-overlay" id="gateModal">
+    <div class="modal">
+      <h2>You're hooked. We knew it.</h2>
+      <p>Sign in to unlock the full VertHurt experience.</p>
+      <ul class="value-props">
+        <li>Compare routes side by side</li>
+        <li>Save routes to your personal library</li>
+        <li>Share branded Score Cards</li>
+        <li>Unlimited route scoring</li>
+      </ul>
+      <a href="/api/auth/strava" class="strava-btn" id="gateStravaBtn">
+        <svg viewBox="0 0 24 24" fill="white"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+        Continue with Strava
+      </a>
+      <button class="modal-close" id="gateClose">Maybe later</button>
+    </div>
+  </div>
 
   <div class="dropzone" id="dropzone">
     <div class="dropzone-icon">&#x26F0;</div>
@@ -471,6 +622,114 @@
 </div>
 
 <script>
+// ============ AUTH STATE ============
+let currentUser = null;
+const FREE_SCORE_LIMIT = 3;
+
+function getScoreCount() {
+  return parseInt(localStorage.getItem('verthurt_score_count') || '0');
+}
+
+function incrementScoreCount() {
+  const count = getScoreCount() + 1;
+  localStorage.setItem('verthurt_score_count', String(count));
+  return count;
+}
+
+function isAuthenticated() {
+  return currentUser !== null;
+}
+
+function shouldGate(action) {
+  if (isAuthenticated()) return false;
+  if (action === 'score') return getScoreCount() >= FREE_SCORE_LIMIT;
+  // compare, save, share always gated for anon
+  return true;
+}
+
+function showGateModal(pendingAction) {
+  // Save pending action for post-auth resumption
+  if (pendingAction) {
+    sessionStorage.setItem('verthurt_pending_action', JSON.stringify(pendingAction));
+  }
+  document.getElementById('gateModal').classList.add('visible');
+  posthog.capture('gate_modal_shown', { trigger: pendingAction?.type || 'unknown', score_count: getScoreCount() });
+}
+
+function hideGateModal() {
+  document.getElementById('gateModal').classList.remove('visible');
+}
+
+function updateNavAuth() {
+  const nav = document.getElementById('navAuth');
+  if (currentUser) {
+    nav.innerHTML = `
+      <div class="user-info">
+        ${currentUser.avatar ? `<img src="${currentUser.avatar}" class="user-avatar" alt="">` : ''}
+        <span class="user-name">${currentUser.name}</span>
+      </div>
+      <button class="logout-btn" onclick="handleLogout()">Log out</button>
+    `;
+  } else {
+    nav.innerHTML = `
+      <a href="/api/auth/strava" class="strava-btn">
+        <svg viewBox="0 0 24 24" fill="white"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+        Sign in with Strava
+      </a>
+    `;
+  }
+}
+
+async function checkAuth() {
+  try {
+    const resp = await fetch('/api/auth/me');
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.authenticated) {
+        currentUser = data.user;
+        // Clear score count for authenticated users
+        localStorage.removeItem('verthurt_score_count');
+        updateNavAuth();
+        posthog.capture('auth_session_restored', { strava_id: currentUser.strava_id });
+        // Check for pending action
+        resumePendingAction();
+      }
+    }
+  } catch (e) {
+    // Not authenticated, that's fine
+  }
+}
+
+async function handleLogout() {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  currentUser = null;
+  updateNavAuth();
+  posthog.capture('user_logged_out');
+}
+
+function resumePendingAction() {
+  const pending = sessionStorage.getItem('verthurt_pending_action');
+  if (!pending) return;
+  sessionStorage.removeItem('verthurt_pending_action');
+  try {
+    const action = JSON.parse(pending);
+    if (action.type === 'score' && action.files) {
+      // Re-trigger file scoring — files are gone after redirect, user needs to re-drop
+      // But we can show a message
+    }
+    // For now, just let them continue — they're authenticated
+  } catch (e) {}
+}
+
+// Init auth check on load
+checkAuth();
+
+// Gate modal close button
+document.getElementById('gateClose').addEventListener('click', hideGateModal);
+document.getElementById('gateModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) hideGateModal();
+});
+
 // ============ GPX SCORING (Server-side) ============
 // All scoring logic runs on the server. The client just uploads the file.
 
@@ -744,8 +1003,28 @@ function drawThumbProfile(result, idx, globalMinE, globalMaxE) {
 const loadedRoutes = [];
 
 function handleFiles(files) {
-  Array.from(files).forEach(async file => {
-    if (!file.name.endsWith('.gpx')) return;
+  const gpxFiles = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.gpx'));
+  if (gpxFiles.length === 0) return;
+
+  // Check gate: comparing (multiple files loaded) requires auth
+  if (gpxFiles.length > 1 && shouldGate('compare')) {
+    showGateModal({ type: 'compare' });
+    posthog.capture('gate_triggered', { reason: 'compare', score_count: getScoreCount() });
+    return;
+  }
+  if (loadedRoutes.length > 0 && gpxFiles.length > 0 && shouldGate('compare')) {
+    showGateModal({ type: 'compare' });
+    posthog.capture('gate_triggered', { reason: 'compare_additional', score_count: getScoreCount() });
+    return;
+  }
+
+  gpxFiles.forEach(async file => {
+    // Check gate: score limit
+    if (shouldGate('score')) {
+      showGateModal({ type: 'score' });
+      posthog.capture('gate_triggered', { reason: 'score_limit', score_count: getScoreCount() });
+      return;
+    }
 
     // Upload to server for scoring
     const formData = new FormData();
@@ -761,6 +1040,11 @@ function handleFiles(files) {
       const result = await resp.json();
       loadedRoutes.push(result);
 
+      // Increment score count for anonymous users
+      if (!isAuthenticated()) {
+        incrementScoreCount();
+      }
+
       // Track route analysis
       posthog.capture('route_analyzed', {
         route_name: result.name,
@@ -769,7 +1053,8 @@ function handleFiles(files) {
         hilliness_score: result.composite,
         descriptor: result.descriptor,
         gain_per_mile_ft: (result.gainPerKm * 3.28084 / 1.60934).toFixed(0),
-        routes_loaded: loadedRoutes.length
+        routes_loaded: loadedRoutes.length,
+        authenticated: isAuthenticated()
       });
 
       updateUI();
