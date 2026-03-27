@@ -279,9 +279,9 @@ def build_segments(points: list[Point], interval_m: float = RESAMPLE_INTERVAL) -
             pt_idx += 1
 
         # Interpolate elevation
-        span = cum_dists[pt_idx + 1] - cum_dists[pt_idx]
+        next_idx = min(pt_idx + 1, len(cum_dists) - 1)
+        span = cum_dists[next_idx] - cum_dists[pt_idx]
         frac = (d - cum_dists[pt_idx]) / span if span > 0 else 0
-        next_idx = min(pt_idx + 1, len(points) - 1)
         ele = points[pt_idx].ele + frac * (points[next_idx].ele - points[pt_idx].ele)
 
         ele_change = ele - prev_ele
@@ -429,6 +429,7 @@ def compute_score(gpx_xml: str, name: str = None, mode: str = "running") -> Scor
     }
 
     intensity_sum = 0.0
+    scoring_gain = 0.0  # segment-based gain — consistent source for all three score components
     climb_dist = 0.0
     climbs = []
     current_climb = None
@@ -443,7 +444,8 @@ def compute_score(gpx_xml: str, name: str = None, mode: str = "running") -> Scor
 
         # Only climbing segments contribute to score
         if seg.gradient > CLIMB_GRADIENT_THRESHOLD:
-            abs_grad = abs(seg.gradient)
+            abs_grad = seg.gradient  # always positive in this branch
+            scoring_gain += seg.ele_change
             climb_dist += seg.dist
 
             # Gradient-weighted intensity: dist × gradient^1.5
@@ -479,8 +481,11 @@ def compute_score(gpx_xml: str, name: str = None, mode: str = "running") -> Scor
     # score = sqrt(value / ceiling) × 100
 
     # Component 1: Climb Density (40%)
+    # Uses segment-based gain so all three components draw from the same data source.
+    # gain_per_km (display stat) still uses dead-band gain — better for user-facing numbers.
+    scoring_gain_per_km = scoring_gain / total_dist_km if total_dist_km > 0 else 0
+    density_score = min(100, math.sqrt(scoring_gain_per_km / DENSITY_CEILING) * 100)
     gain_per_km = gain / total_dist_km if total_dist_km > 0 else 0
-    density_score = min(100, math.sqrt(gain_per_km / DENSITY_CEILING) * 100)
 
     # Component 2: Gradient Intensity (35%)
     raw_intensity = intensity_sum / total_dist if total_dist > 0 else 0

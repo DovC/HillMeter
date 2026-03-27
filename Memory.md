@@ -81,3 +81,63 @@ Scoring logic moved server-side (Python/FastAPI). Client can no longer view the 
 
 ### Future Consideration
 If algorithm becomes a competitive advantage, consider additional obfuscation or compilation to binary (Cython, PyInstaller).
+
+---
+
+## Strava API — Legal Constraints & Architecture
+
+### Key Legal Finding (March 2026)
+Anything touching the Strava API — even a user's own GPX-derived activity data pulled via API — becomes "Strava Data" under their agreement and is subject to all restrictions (seven-day cache, no cross-user display, no aggregation, no AI training). Strava enforced this aggressively in fall 2024, forcing TrailForks to delete ~60M activities.
+
+### Critical Architecture Decision: Two Data Pipelines
+
+**Pipeline 1 — User-uploaded GPX (WE OWN THIS DATA)**
+- User manually exports GPX from Strava/Garmin/etc., drags into VertHurt
+- File never touches Strava API → not "Strava Data"
+- We can store forever, aggregate, build percentiles, train models, share freely
+- This is our strongest legal asset
+
+**Pipeline 2 — Strava API (RESTRICTED, minimal use)**
+- OAuth for authentication ONLY (sign in with Strava)
+- Read profile (name, avatar, city) for display
+- NO activity pulls, NO route sync, NO data storage beyond profile
+- P0.5: `activity:write` to post VertHurt score back to Strava activity description — this is us *writing to* Strava, not reading data. Should be fine but needs legal review.
+
+### Permanently Removed from Roadmap
+- Strava auto-sync / activity import via API
+- Any feature that pulls activities or routes through Strava API
+- Commingling of API-sourced data with user-uploaded data
+
+### Garmin Attribution (Section 2.4)
+If any API-synced data originated from a Garmin device, Garmin attribution must be displayed. Another reason to avoid API data pipeline entirely.
+
+### Reference
+DC Rainmaker coverage of TrailForks/Strava enforcement action, fall 2024.
+
+---
+
+## Mobile Strategy
+
+### Current State
+Mobile-responsive web is low priority for beta. Downloading and uploading a GPX on mobile is painful — not a realistic user flow. Mobile web should be functional but not polished.
+
+### Future: Native Mobile App
+A mobile app is the right path for mobile users. It can integrate directly with on-device file storage, making GPX upload much easier.
+
+### Architecture Implication
+All server-side code must follow a **services architecture with clean API endpoints**. The web UI is just one client consuming `/api/*` routes. A future mobile app (React Native, Flutter, or native) hits the same endpoints. Every feature must be built API-first, with the web frontend as a thin client.
+
+Current API endpoints:
+- `POST /api/score` — GPX upload + scoring
+- `POST /api/waitlist` — email capture
+- `GET /api/waitlist/count` — waitlist count
+
+Planned endpoints (P0):
+- `GET /api/auth/strava` — initiate OAuth
+- `GET /api/auth/strava/callback` — OAuth callback
+- `GET /api/auth/me` — current user profile
+- `POST /api/auth/logout` — logout
+- `GET /api/routes` — user's saved routes
+- `POST /api/routes` — save a scored route
+- `GET /api/routes/{id}` — single route detail
+- `DELETE /api/routes/{id}` — remove route from library
