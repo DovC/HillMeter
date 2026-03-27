@@ -141,3 +141,44 @@ Planned endpoints (P0):
 - `POST /api/routes` — save a scored route
 - `GET /api/routes/{id}` — single route detail
 - `DELETE /api/routes/{id}` — remove route from library
+
+---
+
+## Anonymous Gate / Conversion Strategy
+
+### Gate Logic (Confirmed March 2026)
+
+| Action | Anonymous | Authenticated |
+|---|---|---|
+| Score 1st route | Free | Free |
+| Score 2nd route | Free | Free |
+| Score 3rd route | Free | Free |
+| Score 4th+ route | **Gate** | Free |
+| Compare any 2 routes | **Gate** | Free |
+| Save route | **Gate** | Free |
+| Share route | **Gate** | Free |
+
+### Implementation
+- Track score count in **localStorage** (persists across visits, prevents new-tab bypass)
+- Gate modal appears with "You're hooked. We knew it." + "Continue with Strava" CTA
+- Store pending action in sessionStorage so post-auth resumes exactly where user left off
+- Gate modal explains value: compare routes, save library, share Score Cards
+
+### Rationale
+3 free scores lets users see enough value before converting. They've likely already thought "I want to compare these" — natural conversion moment. Less friction than gating on second upload.
+
+---
+
+## Strava OAuth Configuration
+
+### Setup
+- **Client ID**: 157764
+- **Credentials**: Stored as environment variables (`STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`), never in code
+- **Scopes**: `read` (P0), add `activity:write` for P0.5
+- **Callback domains**: localhost, hilliness-analyzer-1077888722357.us-east1.run.app, verthurt.com
+- **Developer Program**: Currently on personal dev account. Need to apply for full Dev Program to scale beyond personal testing. Up to 15 users can auth before approval.
+
+### What Strava Auth Provides
+- User authentication (sign in)
+- Profile data: name, avatar, city
+- Nothing else — no activity reads, no route sync (see Strava Legal Constraints section)
