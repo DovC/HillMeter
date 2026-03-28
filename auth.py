@@ -31,6 +31,7 @@ def _make_jwt(user_data: dict) -> str:
         "sub": str(user_data["strava_id"]),
         "name": user_data.get("name", ""),
         "avatar": user_data.get("avatar", ""),
+        "profile_complete": user_data.get("profile_complete", False),
         "iat": int(time.time()),
         "exp": int(time.time()) + JWT_EXPIRY_SECONDS,
     }
@@ -48,6 +49,7 @@ def get_current_user(request: Request) -> dict | None:
             "strava_id": payload["sub"],
             "name": payload.get("name", ""),
             "avatar": payload.get("avatar", ""),
+            "profile_complete": payload.get("profile_complete", False),
         }
     except Exception:
         return None
@@ -120,8 +122,10 @@ async def strava_callback(request: Request):
             "avatar": user_data["avatar"],
             "last_login": user_data["last_login"],
         })
+        user_data["profile_complete"] = existing.to_dict().get("profile_complete", False)
     else:
         user_data["created_at"] = time.time()
+        user_data["profile_complete"] = False
         user_ref.set(user_data)
 
     # Create JWT and set cookie
@@ -144,7 +148,92 @@ async def get_me(request: Request):
     user = get_current_user(request)
     if not user:
         return JSONResponse({"authenticated": False}, status_code=401)
+
+    # Fetch first/last name from Firestore for profile form
+    user_ref = db.collection("users").document(user["strava_id"]).get()
+    if user_ref.exists:
+        fs_data = user_ref.to_dict()
+        user["first_name"] = fs_data.get("first_name", "")
+        user["last_name"] = fs_data.get("last_name", "")
+        user["email"] = fs_data.get("email", "")
+        # If no first/last stored yet, split from full name
+        if not user["first_name"] and user.get("name"):
+            parts = user["name"].split(" ", 1)
+            user["first_name"] = parts[0]
+            user["last_name"] = parts[1] if len(parts) > 1 else ""
+
     return JSONResponse({"authenticated": True, "user": user})
+
+
+async def update_profile(request: Request):
+    """Update user profile (name, email) and mark profile as complete."""
+    user = get_current_user(request)
+    if not user:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+
+    data = await request.json()
+    first_name = data.get("first_name", "").strip()
+    last_name = data.get("last_name", "").strip()
+    email = data.get("email", "").strip().lower()
+
+    if not email or "@" not in email:
+        return JSONResponse({"error": "Valid email is required"}, status_code=400)
+    if not first_name:
+        return JSONResponse({"error": "First name is required"}, status_code=400)
+
+    name = f"{first_name} {last_name}".strip()
+
+    # Update Firestore
+    user_ref = db.collection("users").document(user["strava_id"])
+    user_ref.update({
+        "name": name,
+        "first_name": first_name,
+        "last_name": last_name,
+        "email": email,
+        "profile_complete": True,
+    })
+
+    # Re-issue JWT with updated info
+    updated_user = {
+        "strava_id": user["strava_id"],
+        "name": name,
+        "avatar": user.get("avatar", ""),
+        "profile_complete": True,
+    }
+    token = _make_jwt(updated_user)
+
+    response = JSONResponse({"status": "ok", "user": updated_user})
+    response.set_cookie(
+        key="verthurt_session",
+        value=token,
+        max_age=JWT_EXPIRY_SECONDS,
+        httponly=True,
+        samesite="lax",
+        secure=request.url.scheme == "https",
+    )
+    return response
+
+
+async def delete_account(request: Request):
+    """Delete user account, user_routes links, but NOT the route data itself."""
+    user = get_current_user(request)
+    if not user:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+
+    strava_id = user["strava_id"]
+
+    # Delete all user_routes links for this user
+    links = db.collection("user_routes").where("user_id", "==", strava_id).get()
+    for link in links:
+        link.reference.delete()
+
+    # Delete the user document
+    db.collection("users").document(strava_id).delete()
+
+    # Clear session
+    response = JSONResponse({"status": "deleted"})
+    response.delete_cookie("verthurt_session")
+    return response
 
 
 async def logout(request: Request):
