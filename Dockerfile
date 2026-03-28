@@ -5,10 +5,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY server.py .
-COPY scoring.py .
-COPY auth.py .
-COPY static/ static/
+# Copy all app files (no selective caching - ensures static files always update)
+COPY . .
 
 EXPOSE 8080
 
