@@ -717,6 +717,66 @@
     border-radius: 8px; font-size: 0.85rem; font-weight: 500; cursor: pointer;
   }
   .gpx-help-got-it:hover { background: #374151; }
+
+  /* Profile Completion Modal */
+  .profile-modal {
+    background: #fff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+    overflow: hidden;
+  }
+  .profile-modal-header {
+    padding: 24px 24px 8px;
+  }
+  .profile-modal-header h2 {
+    font-size: 1.25rem; font-weight: 700; color: #111827; margin-bottom: 4px;
+  }
+  .profile-modal-header p {
+    font-size: 0.875rem; color: #6b7280; line-height: 1.5;
+  }
+  .profile-form {
+    padding: 16px 24px 24px;
+  }
+  .profile-form .form-row {
+    display: flex; gap: 12px;
+  }
+  .profile-form .form-group {
+    display: flex; flex-direction: column; margin-bottom: 14px; flex: 1;
+  }
+  .profile-form label {
+    font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 4px;
+  }
+  .profile-form input {
+    padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 0.9rem; color: #111827; outline: none; transition: border-color 0.15s;
+  }
+  .profile-form input:focus {
+    border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  }
+  .profile-form-hint {
+    font-size: 0.75rem; color: #9ca3af; margin-bottom: 16px;
+  }
+  .profile-submit-btn {
+    width: 100%; padding: 10px; background: #111827; color: #fff; border: none;
+    border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .profile-submit-btn:hover { background: #374151; }
+  .profile-submit-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+  .profile-danger-zone {
+    padding: 16px 24px 24px;
+    border-top: 1px solid #f3f4f6;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .delete-account-btn {
+    padding: 7px 14px; background: #fff; color: #EF4444; border: 1px solid #FCA5A5;
+    border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+    white-space: nowrap; transition: all 0.15s;
+  }
+  .delete-account-btn:hover { background: #FEF2F2; border-color: #EF4444; }
+  .danger-hint { font-size: 0.72rem; color: #9ca3af; }
 </style>
 </head>
 <body>
@@ -778,6 +838,68 @@
         Continue with Strava
       </a>
       <button class="modal-close" id="gateClose">Maybe later</button>
+    </div>
+  </div>
+
+  <!-- Profile Completion Modal (one-time after first Strava login) -->
+  <div class="modal-overlay" id="profileModal">
+    <div class="profile-modal">
+      <div class="profile-modal-header">
+        <h2>Welcome to VertHurt!</h2>
+        <p>Just a couple quick things so we can set up your account.</p>
+      </div>
+      <form id="profileForm" class="profile-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="profileFirstName">First Name</label>
+            <input type="text" id="profileFirstName" required>
+          </div>
+          <div class="form-group">
+            <label for="profileLastName">Last Name</label>
+            <input type="text" id="profileLastName">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="profileEmail">Email</label>
+          <input type="email" id="profileEmail" placeholder="you@example.com" required>
+        </div>
+        <div class="profile-form-hint">We'll only use this for account-related notifications. No spam.</div>
+        <button type="submit" class="profile-submit-btn" id="profileSubmitBtn">Let's go</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Profile Modal -->
+  <div class="modal-overlay" id="editProfileModal">
+    <div class="profile-modal">
+      <div class="profile-modal-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <h2>Your Profile</h2>
+          <p>Update your account details.</p>
+        </div>
+        <button class="gpx-help-close" onclick="document.getElementById('editProfileModal').classList.remove('visible')" aria-label="Close">&times;</button>
+      </div>
+      <form id="editProfileForm" class="profile-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="editFirstName">First Name</label>
+            <input type="text" id="editFirstName" required>
+          </div>
+          <div class="form-group">
+            <label for="editLastName">Last Name</label>
+            <input type="text" id="editLastName">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="editEmail">Email</label>
+          <input type="email" id="editEmail" required>
+        </div>
+        <button type="submit" class="profile-submit-btn" id="editProfileSubmitBtn">Save Changes</button>
+      </form>
+      <div class="profile-danger-zone">
+        <button class="delete-account-btn" onclick="deleteAccount()">Delete Account</button>
+        <span class="danger-hint">Permanently removes your account and saved routes.</span>
+      </div>
     </div>
   </div>
 
@@ -967,7 +1089,7 @@ function updateNavAuth() {
   const nav = document.getElementById('navAuth');
   if (currentUser) {
     nav.innerHTML = `
-      <div class="user-info">
+      <div class="user-info" onclick="showEditProfileModal()" style="cursor:pointer;" title="Edit profile">
         ${currentUser.avatar ? `<img src="${currentUser.avatar}" class="user-avatar" alt="">` : ''}
         <span class="user-name">${currentUser.name}</span>
       </div>
@@ -995,12 +1117,137 @@ async function checkAuth() {
         updateNavAuth();
         updateTabs();
         posthog.capture('auth_session_restored', { strava_id: currentUser.strava_id });
+
+        // Show profile completion modal on first login
+        if (!currentUser.profile_complete) {
+          showProfileModal(currentUser);
+        }
+
         // Check for pending action
         resumePendingAction();
       }
     }
   } catch (e) {
     // Not authenticated, that's fine
+  }
+}
+
+function showProfileModal(user) {
+  document.getElementById('profileFirstName').value = user.first_name || '';
+  document.getElementById('profileLastName').value = user.last_name || '';
+  document.getElementById('profileEmail').value = user.email || '';
+  document.getElementById('profileModal').classList.add('visible');
+}
+
+document.getElementById('profileForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('profileSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  try {
+    const resp = await fetch('/api/auth/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        first_name: document.getElementById('profileFirstName').value.trim(),
+        last_name: document.getElementById('profileLastName').value.trim(),
+        email: document.getElementById('profileEmail').value.trim(),
+      }),
+    });
+
+    const data = await resp.json();
+    if (resp.ok) {
+      // Fetch full user data (includes first_name, last_name, email)
+      const meResp = await fetch('/api/auth/me');
+      if (meResp.ok) {
+        const meData = await meResp.json();
+        if (meData.authenticated) currentUser = meData.user;
+      } else {
+        currentUser = data.user;
+      }
+      updateNavAuth();
+      document.getElementById('profileModal').classList.remove('visible');
+      posthog.capture('profile_completed', { email_provided: true });
+    } else {
+      btn.textContent = data.error || 'Error';
+      btn.disabled = false;
+      setTimeout(() => { btn.textContent = "Let's go"; }, 2000);
+    }
+  } catch (err) {
+    btn.textContent = 'Error';
+    btn.disabled = false;
+    setTimeout(() => { btn.textContent = "Let's go"; }, 2000);
+  }
+});
+
+function showEditProfileModal() {
+  document.getElementById('editFirstName').value = currentUser.first_name || '';
+  document.getElementById('editLastName').value = currentUser.last_name || '';
+  document.getElementById('editEmail').value = currentUser.email || '';
+  document.getElementById('editProfileSubmitBtn').textContent = 'Save Changes';
+  document.getElementById('editProfileSubmitBtn').disabled = false;
+  document.getElementById('editProfileModal').classList.add('visible');
+}
+
+document.getElementById('editProfileForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('editProfileSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  try {
+    const resp = await fetch('/api/auth/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        first_name: document.getElementById('editFirstName').value.trim(),
+        last_name: document.getElementById('editLastName').value.trim(),
+        email: document.getElementById('editEmail').value.trim(),
+      }),
+    });
+
+    const data = await resp.json();
+    if (resp.ok) {
+      currentUser = data.user;
+      // Fetch full user data (first/last/email) for future edits
+      const meResp = await fetch('/api/auth/me');
+      if (meResp.ok) {
+        const meData = await meResp.json();
+        if (meData.authenticated) currentUser = meData.user;
+      }
+      updateNavAuth();
+      document.getElementById('editProfileModal').classList.remove('visible');
+      posthog.capture('profile_updated');
+    } else {
+      btn.textContent = data.error || 'Error';
+      btn.disabled = false;
+      setTimeout(() => { btn.textContent = 'Save Changes'; }, 2000);
+    }
+  } catch (err) {
+    btn.textContent = 'Error';
+    btn.disabled = false;
+    setTimeout(() => { btn.textContent = 'Save Changes'; }, 2000);
+  }
+});
+
+document.getElementById('editProfileModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) document.getElementById('editProfileModal').classList.remove('visible');
+});
+
+async function deleteAccount() {
+  if (!confirm('Are you sure? This will permanently delete your account and all saved routes. This cannot be undone.')) return;
+
+  try {
+    const resp = await fetch('/api/auth/account', { method: 'DELETE' });
+    if (resp.ok) {
+      posthog.capture('account_deleted');
+      window.location.reload();
+    } else {
+      alert('Failed to delete account. Please try again.');
+    }
+  } catch (err) {
+    alert('Failed to delete account. Please try again.');
   }
 }
 
