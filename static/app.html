@@ -4,16 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VertHurt — Route Hilliness Analyzer</title>
-<script src="/ingest/static/array.js" onerror="window.posthog={init:()=>{},capture:()=>{}}"></script>
+<script src="/ingest/static/array.js" onerror="window.posthog={init:()=>{},capture:()=>{},identify:()=>{},reset:()=>{}}"></script>
 <script>
   try {
     posthog.init('phc_p73TuSUytTY81qH464bPr7eC99btH2sjRdy1yzsCGhI', {
       api_host: '/ingest',
       ui_host: 'https://us.posthog.com',
-      defaults: '2026-01-30'
+      defaults: '2026-01-30',
+      autocapture: true,
+      capture_pageview: false,
+      capture_pageleave: false,
+      disable_web_vitals: true,
     });
   } catch(e) {
-    window.posthog = { init: () => {}, capture: () => {} };
+    window.posthog = { init: () => {}, capture: () => {}, identify: () => {}, reset: () => {} };
   }
 </script>
 <style>
@@ -985,7 +989,7 @@
       <div class="dropzone-text"><strong>Drop GPX files here</strong> or click to browse<br>Supports multiple files for comparison</div>
     </div>
     <input type="file" id="fileInput" accept=".gpx" multiple>
-    <a href="#" class="gpx-help-link" onclick="event.preventDefault(); document.getElementById('gpxHelpModal').classList.add('visible');">What the heck's a GPX?</a>
+    <a href="#" class="gpx-help-link" onclick="event.preventDefault(); document.getElementById('gpxHelpModal').classList.add('visible'); posthog.capture('gpx_help_opened');">What the heck's a GPX?</a>
 
     <div class="loaded-files" id="loadedFiles"></div>
 
@@ -1116,6 +1120,17 @@ async function checkAuth() {
         localStorage.removeItem('verthurt_score_count');
         updateNavAuth();
         updateTabs();
+
+        // Identify user in PostHog with email as distinct ID
+        if (currentUser.email) {
+          posthog.identify(currentUser.email, {
+            $email: currentUser.email,
+            $name: (currentUser.first_name || '') + ' ' + (currentUser.last_name || ''),
+            strava_id: currentUser.strava_id,
+            first_name: currentUser.first_name,
+            last_name: currentUser.last_name,
+          });
+        }
         posthog.capture('auth_session_restored', { strava_id: currentUser.strava_id });
 
         // Show profile completion modal on first login
@@ -1168,6 +1183,17 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
       }
       updateNavAuth();
       document.getElementById('profileModal').classList.remove('visible');
+
+      // Identify user in PostHog now that we have email
+      if (currentUser.email) {
+        posthog.identify(currentUser.email, {
+          $email: currentUser.email,
+          $name: (currentUser.first_name || '') + ' ' + (currentUser.last_name || ''),
+          strava_id: currentUser.strava_id,
+          first_name: currentUser.first_name,
+          last_name: currentUser.last_name,
+        });
+      }
       posthog.capture('profile_completed', { email_provided: true });
     } else {
       btn.textContent = data.error || 'Error';
@@ -1218,6 +1244,17 @@ document.getElementById('editProfileForm').addEventListener('submit', async (e) 
       }
       updateNavAuth();
       document.getElementById('editProfileModal').classList.remove('visible');
+
+      // Re-identify in case email changed
+      if (currentUser.email) {
+        posthog.identify(currentUser.email, {
+          $email: currentUser.email,
+          $name: (currentUser.first_name || '') + ' ' + (currentUser.last_name || ''),
+          strava_id: currentUser.strava_id,
+          first_name: currentUser.first_name,
+          last_name: currentUser.last_name,
+        });
+      }
       posthog.capture('profile_updated');
     } else {
       btn.textContent = data.error || 'Error';
@@ -1242,6 +1279,7 @@ async function deleteAccount() {
     const resp = await fetch('/api/auth/account', { method: 'DELETE' });
     if (resp.ok) {
       posthog.capture('account_deleted');
+      posthog.reset();
       window.location.reload();
     } else {
       alert('Failed to delete account. Please try again.');
@@ -1254,6 +1292,7 @@ async function deleteAccount() {
 async function handleLogout() {
   await fetch('/api/auth/logout', { method: 'POST' });
   posthog.capture('user_logged_out');
+  posthog.reset();
   window.location.reload();
 }
 
@@ -1319,6 +1358,7 @@ async function resumePendingAction() {
 }
 
 // Init auth check on load
+posthog.capture('$pageview');
 checkAuth();
 
 // Gate modal close button
@@ -1867,6 +1907,7 @@ async function deleteRoute(routeId, linkId) {
 function switchTab(tab) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
+  posthog.capture('tab_switched', { tab: tab });
 
   if (tab === 'score') {
     document.getElementById('scoreTab').style.display = '';
