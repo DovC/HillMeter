@@ -34,7 +34,7 @@
   .container {
     max-width: 960px;
     margin: 0 auto;
-    padding: 48px 24px;
+    padding: 24px 24px;
   }
 
   .logo-container {
@@ -53,9 +53,7 @@
   }
 
   .subtitle {
-    font-size: 1rem;
-    color: #6B7280;
-    margin-bottom: 48px;
+    display: none; /* moved into dropzone */
   }
 
   /* Drop zone */
@@ -65,9 +63,19 @@
     padding: 48px 24px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.4s ease;
     background: #FFFFFF;
-    margin-bottom: 32px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .dropzone.compact {
+    padding: 16px 24px;
+  }
+  .dropzone.compact .dropzone-icon {
+    display: none;
+  }
+  .dropzone.compact .dropzone-subtitle {
+    display: none;
   }
   .dropzone:hover, .dropzone.dragover {
     border-color: #2563EB;
@@ -75,15 +83,23 @@
   }
   .dropzone-icon {
     font-size: 2rem;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     color: #9CA3AF;
+    transition: all 0.4s ease;
   }
   .dropzone-text {
     font-size: 1rem;
     color: #6B7280;
+    transition: all 0.4s ease;
   }
   .dropzone-text strong {
     color: #2563EB;
+  }
+  .dropzone-subtitle {
+    font-size: 0.85rem;
+    color: #9CA3AF;
+    margin-top: 4px;
+    transition: all 0.4s ease;
   }
 
   input[type="file"] { display: none; }
@@ -91,9 +107,9 @@
   /* Loaded files */
   .loaded-files {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     flex-wrap: wrap;
-    margin-bottom: 32px;
+    margin-bottom: 16px;
   }
   .file-chip {
     display: inline-flex;
@@ -123,18 +139,28 @@
 
   /* Results section */
   .results-section { display: none; }
-  .results-section.visible { display: block; }
+  .results-section.visible {
+    display: block;
+    animation: fadeInUp 0.4s ease;
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 
   /* Comparison layout */
   .comparison {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 24px;
-    margin-bottom: 32px;
+    gap: 16px;
+    margin-bottom: 16px;
   }
   @media (min-width: 640px) {
-    .comparison.two-up {
+    .comparison {
       grid-template-columns: 1fr 1fr;
+    }
+    .comparison.single {
+      grid-template-columns: 1fr;
     }
   }
 
@@ -513,11 +539,15 @@
   .btn-share:hover { background: #1D4ED8; }
 
   /* Tabs */
+  .tabs-row {
+    display: flex;
+    align-items: center;
+    border-bottom: 2px solid #E5E7EB;
+    margin-bottom: 16px;
+  }
   .tabs {
     display: flex;
     gap: 0;
-    margin-bottom: 24px;
-    border-bottom: 2px solid #E5E7EB;
   }
   .tab {
     padding: 10px 20px;
@@ -619,13 +649,13 @@
 
   /* GPX Help link */
   .gpx-help-link {
-    display: block;
-    text-align: center;
-    margin-top: 0.5rem;
-    font-size: 0.85rem;
+    margin-left: auto;
+    font-size: 0.8rem;
     color: #6b7280;
     text-decoration: none;
     cursor: pointer;
+    white-space: nowrap;
+    padding: 10px 0;
   }
   .gpx-help-link:hover { color: #374151; text-decoration: underline; }
 
@@ -976,20 +1006,23 @@
     </div>
   </div>
 
-  <!-- Tabs (My Routes only visible when authenticated) -->
-  <div class="tabs" id="tabBar" style="display:none">
-    <button class="tab active" data-tab="score" id="tabScore">Score a Route</button>
-    <button class="tab" data-tab="myroutes" id="tabMyRoutes">My Routes</button>
+  <!-- Tabs row with GPX help link -->
+  <div class="tabs-row">
+    <div class="tabs" id="tabBar" style="display:none">
+      <button class="tab active" data-tab="score" id="tabScore">Score a Route</button>
+      <button class="tab" data-tab="myroutes" id="tabMyRoutes">My Routes</button>
+    </div>
+    <a href="#" class="gpx-help-link" onclick="event.preventDefault(); document.getElementById('gpxHelpModal').classList.add('visible'); posthog.capture('gpx_help_opened');">What the heck's a GPX?</a>
   </div>
 
   <!-- Score tab content -->
   <div id="scoreTab">
     <div class="dropzone" id="dropzone">
       <div class="dropzone-icon">&#x26F0;</div>
-      <div class="dropzone-text"><strong>Drop GPX files here</strong> or click to browse<br>Supports multiple files for comparison</div>
+      <div class="dropzone-text"><strong>Drop GPX files here</strong> or click to browse</div>
+      <div class="dropzone-subtitle">Score how hilly your route really is</div>
     </div>
     <input type="file" id="fileInput" accept=".gpx" multiple>
-    <a href="#" class="gpx-help-link" onclick="event.preventDefault(); document.getElementById('gpxHelpModal').classList.add('visible'); posthog.capture('gpx_help_opened');">What the heck's a GPX?</a>
 
     <div class="loaded-files" id="loadedFiles"></div>
 
@@ -1064,13 +1097,13 @@ function shouldGate(action) {
 function showGateModal(pendingAction) {
   // Save pending action + route data for post-auth resumption
   if (pendingAction) {
-    // Stash scored routes so they survive the OAuth redirect
-    // Strip heavy profile/bandColors data to stay within sessionStorage limits
-    if (loadedRoutes.length > 0) {
+    // For compare actions, pendingGpxFiles is already set by the caller
+    // For save actions, stash current scored routes + raw GPX
+    if (!pendingAction.pendingGpxFiles && loadedRoutes.length > 0) {
       pendingAction.routes = loadedRoutes.map(r => {
         const slim = {...r};
-        delete slim.profile;      // thousands of points — too large
-        delete slim.bandColors;   // can be re-derived
+        delete slim.profile;
+        delete slim.bandColors;
         return slim;
       });
       pendingAction.gpxRaw = rawGpxStore;
@@ -1303,24 +1336,52 @@ async function resumePendingAction() {
   try {
     const action = JSON.parse(pending);
 
+    // Helper: re-score a raw GPX string and return the result
+    async function reScoreGpx(gpxText, fileName) {
+      const formData = new FormData();
+      formData.append('file', new Blob([gpxText], { type: 'application/gpx+xml' }), fileName);
+      const resp = await fetch('/api/score', { method: 'POST', body: formData });
+      if (resp.ok) return await resp.json();
+      return null;
+    }
+
+    // Resume compare: re-score all stashed GPX files and display them
+    if (action.type === 'compare' && action.pendingGpxFiles) {
+      const gpxEntries = Object.entries(action.pendingGpxFiles);
+      const fileNames = action.fileNames || gpxEntries.map((_, i) => `route_${i}.gpx`);
+      loadedRoutes = [];
+      rawGpxStore = {};
+
+      for (let i = 0; i < gpxEntries.length; i++) {
+        const gpxText = gpxEntries[i][1];
+        const result = await reScoreGpx(gpxText, fileNames[i] || `route_${i}.gpx`);
+        if (result) {
+          const idx = loadedRoutes.length;
+          loadedRoutes.push(result);
+          rawGpxStore[idx] = gpxText;
+        }
+      }
+
+      if (loadedRoutes.length > 0) {
+        updateUI();
+        posthog.capture('compare_resumed', { routes: loadedRoutes.length, source: 'post_auth_resume' });
+      }
+    }
+
+    // Resume save: re-score and auto-save
     if (action.type === 'save' && action.routes && action.routes.length > 0) {
       const saveIdx = action.idx || 0;
       const route = action.routes[saveIdx];
       const gpxRaw = action.gpxRaw ? (action.gpxRaw[saveIdx] || '') : '';
 
-      // Re-score from raw GPX if available (restores full data including profile)
       if (gpxRaw) {
-        const formData = new FormData();
-        formData.append('file', new Blob([gpxRaw], { type: 'application/gpx+xml' }), (route.name || 'route') + '.gpx');
         try {
-          const scoreResp = await fetch('/api/score', { method: 'POST', body: formData });
-          if (scoreResp.ok) {
-            const fullRoute = await scoreResp.json();
+          const fullRoute = await reScoreGpx(gpxRaw, (route.name || 'route') + '.gpx');
+          if (fullRoute) {
             loadedRoutes = [fullRoute];
             rawGpxStore = { 0: gpxRaw };
-            renderResults(loadedRoutes);
+            updateUI();
 
-            // Now save it
             const saveResp = await fetch('/api/routes', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1328,7 +1389,6 @@ async function resumePendingAction() {
             });
             if (saveResp.ok) {
               posthog.capture('route_saved', { route_name: fullRoute.name, score: fullRoute.composite, source: 'post_auth_resume' });
-              // Mark the save button as saved
               const btn = document.querySelector('.btn-save[data-idx="0"]');
               if (btn) { btn.textContent = 'Saved'; btn.classList.add('saved'); btn.disabled = true; }
             }
@@ -1337,7 +1397,6 @@ async function resumePendingAction() {
           console.error('Re-score after auth failed:', e);
         }
       } else {
-        // No raw GPX — just save the slim data
         try {
           const resp = await fetch('/api/routes', {
             method: 'POST',
@@ -1385,7 +1444,7 @@ function renderResults(results) {
   section.classList.add('visible');
   compDiv.innerHTML = '';
   profDiv.innerHTML = '';
-  compDiv.className = 'comparison' + (results.length === 2 ? ' two-up' : '');
+  compDiv.className = 'comparison' + (results.length === 1 ? ' single' : '');
 
   // Compute global elevation range across all routes for consistent Y-axis
   let globalMinEle = Infinity, globalMaxEle = -Infinity;
@@ -1663,12 +1722,27 @@ function handleFiles(files) {
 
   // Check gate: comparing (multiple files loaded) requires auth
   if (gpxFiles.length > 1 && shouldGate('compare')) {
-    showGateModal({ type: 'compare' });
+    // Read all GPX files before gating so we can stash them
+    Promise.all(gpxFiles.map(f => f.text().then(text => ({ name: f.name, text })))).then(gpxData => {
+      const pendingGpx = {};
+      gpxData.forEach((g, i) => { pendingGpx[i] = g.text; });
+      showGateModal({ type: 'compare', pendingGpxFiles: pendingGpx, fileNames: gpxData.map(g => g.name) });
+    });
     posthog.capture('gate_triggered', { reason: 'compare', score_count: getScoreCount() });
     return;
   }
   if (loadedRoutes.length > 0 && gpxFiles.length > 0 && shouldGate('compare')) {
-    showGateModal({ type: 'compare' });
+    // Read the new files and combine with already-loaded raw GPX
+    Promise.all(gpxFiles.map(f => f.text().then(text => ({ name: f.name, text })))).then(gpxData => {
+      const pendingGpx = { ...rawGpxStore };
+      const fileNames = loadedRoutes.map(r => r.name);
+      gpxData.forEach((g, i) => {
+        const idx = loadedRoutes.length + i;
+        pendingGpx[idx] = g.text;
+        fileNames.push(g.name);
+      });
+      showGateModal({ type: 'compare', pendingGpxFiles: pendingGpx, fileNames });
+    });
     posthog.capture('gate_triggered', { reason: 'compare_additional', score_count: getScoreCount() });
     return;
   }
@@ -1743,9 +1817,13 @@ function updateUI() {
     });
   });
 
+  // Animate dropzone compact/expand
+  const dz = document.getElementById('dropzone');
   if (loadedRoutes.length > 0) {
+    dz.classList.add('compact');
     renderResults(loadedRoutes);
   } else {
+    dz.classList.remove('compact');
     document.getElementById('results').classList.remove('visible');
   }
 }
