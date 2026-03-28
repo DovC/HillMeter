@@ -1,7 +1,8 @@
 from dotenv import load_dotenv
 load_dotenv()  # Load .env BEFORE other imports that read env vars
 
-from fastapi import FastAPI, Request, UploadFile, File, Form
+from fastapi import FastAPI, Request, UploadFile, File, Form, BackgroundTasks
+import xml.etree.ElementTree as ET
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, Response
 from google.cloud import firestore
@@ -64,8 +65,68 @@ app.add_api_route("/api/auth/logout", logout, methods=["POST"])
 
 # ============ SCORING API ============
 
+def _gpx_fingerprint(gpx_xml: str, dist_km: float) -> str | None:
+    """Fuzzy dedup fingerprint: start/end coords (2dp) + rounded distance."""
+    try:
+        root = ET.fromstring(gpx_xml)
+        ns = {"g": "http://www.topografix.com/GPX/1/1"}
+        pts = root.findall(".//g:trkpt", ns)
+        if not pts:
+            return None
+        slat = round(float(pts[0].attrib["lat"]), 2)
+        slon = round(float(pts[0].attrib["lon"]), 2)
+        elat = round(float(pts[-1].attrib["lat"]), 2)
+        elon = round(float(pts[-1].attrib["lon"]), 2)
+        return f"{slat}_{slon}_{elat}_{elon}_{round(dist_km)}"
+    except Exception:
+        return None
+
+
+def _save_anonymous_route(result, gpx_xml: str):
+    """Save every scored route anonymously to scored_routes collection.
+    No user data stored. Runs as a background task after the response is sent.
+    """
+    try:
+        gpx_hash = hashlib.sha256(gpx_xml.encode()).hexdigest()[:16]
+        fingerprint = _gpx_fingerprint(gpx_xml, result.total_dist_km)
+
+        # Skip if we already have a route with this fuzzy fingerprint
+        if fingerprint:
+            existing = db.collection("scored_routes") \
+                .where("fingerprint", "==", fingerprint).limit(1).get()
+            if list(existing):
+                return
+
+        db.collection("scored_routes").add({
+            "fingerprint": fingerprint,
+            "gpx_hash": gpx_hash,
+            "gpx_raw": gpx_xml,
+            "name": result.name,
+            "date": result.date,
+            "scored_at": datetime.utcnow().isoformat(),
+            "composite": result.composite,
+            "descriptor": result.descriptor,
+            "score_class": result.score_class,
+            "density_score": result.density_score,
+            "intensity_score": result.intensity_score,
+            "continuity_score": result.continuity_score,
+            "total_dist_km": result.total_dist_km,
+            "total_gain": result.total_gain,
+            "total_loss": result.total_loss,
+            "min_ele": result.min_ele,
+            "max_ele": result.max_ele,
+            "gain_per_km": result.gain_per_km,
+            "climb_dist": result.climb_dist,
+            "bands": result.bands,
+            "band_colors": result.band_colors,
+            "profile": result.profile,
+        })
+    except Exception:
+        pass  # Never let anonymous save affect the user-facing response
+
+
 @app.post("/api/score")
-async def score_route(file: UploadFile = File(...)):
+async def score_route(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     """
     Score a GPX file and return hilliness analysis.
 
@@ -84,7 +145,7 @@ async def score_route(file: UploadFile = File(...)):
         name = name.replace("_", " ")
 
         result = compute_score(gpx_xml, name=name, mode="running")
-
+        background_tasks.add_task(_save_anonymous_route, result, gpx_xml)
         return JSONResponse(result.to_dict())
 
     except ValueError as e:
