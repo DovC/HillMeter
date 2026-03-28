@@ -15,6 +15,19 @@ import re
 
 app = FastAPI()
 
+# Prevent CDN/proxy caching of HTML files so deploys are immediately visible
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class NoCacheHTMLMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        if request.url.path.endswith('.html') or request.url.path == '/':
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+        return response
+
+app.add_middleware(NoCacheHTMLMiddleware)
+
 # Firestore client (auto-authenticates on Cloud Run via service account)
 db = firestore.Client(project="hilliness-analyzer")
 
