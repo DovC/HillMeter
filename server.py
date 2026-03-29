@@ -359,5 +359,24 @@ async def posthog_proxy(path: str, request: Request):
     except Exception:
         return Response(status_code=502)
 
-# Serve static files — app.html for alpha testers, index.html for public
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+# Serve HTML files with no-cache headers, static assets normally
+from fastapi.responses import FileResponse
+import os
+
+@app.get("/app.html")
+async def serve_app():
+    return FileResponse("static/app.html", headers={
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache"
+    })
+
+@app.get("/index.html")
+@app.get("/")
+async def serve_index():
+    return FileResponse("static/index.html", headers={
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache"
+    })
+
+# Other static assets (CSS, JS, images)
+app.mount("/", StaticFiles(directory="static", html=False), name="static")
