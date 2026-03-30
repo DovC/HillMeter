@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from google.cloud import firestore
 from datetime import datetime
 from scoring import compute_score
-from auth import strava_login, strava_callback, get_me, logout, update_profile, delete_account, get_current_user
+from auth import strava_login, strava_callback, get_me, logout, update_profile, delete_account, get_current_user, send_magic_link, verify_magic_link
 import httpx
 import os
 import re
@@ -71,8 +71,15 @@ async def waitlist_count():
 
 # ============ AUTH API ============
 
+# Magic link auth (primary)
+app.add_api_route("/api/auth/magic-link", send_magic_link, methods=["POST"])
+app.add_api_route("/api/auth/verify", verify_magic_link, methods=["GET"])
+
+# Strava OAuth (kept for future feature flag)
 app.add_api_route("/api/auth/strava", strava_login, methods=["GET"])
 app.add_api_route("/api/auth/strava/callback", strava_callback, methods=["GET"])
+
+# Shared auth endpoints
 app.add_api_route("/api/auth/me", get_me, methods=["GET"])
 app.add_api_route("/api/auth/profile", update_profile, methods=["POST"])
 app.add_api_route("/api/auth/account", delete_account, methods=["DELETE"])
@@ -112,10 +119,11 @@ def _save_anonymous_route(result, gpx_xml: str):
             if list(existing):
                 return
 
+        gpx_compressed = base64.b64encode(gzip.compress(gpx_xml.encode())).decode()
         db.collection("scored_routes").add({
             "fingerprint": fingerprint,
             "gpx_hash": gpx_hash,
-            "gpx_raw": gpx_xml,
+            "gpx_compressed": gpx_compressed,
             "name": result.name,
             "date": result.date,
             "scored_at": datetime.utcnow().isoformat(),
@@ -173,6 +181,8 @@ async def score_route(background_tasks: BackgroundTasks, file: UploadFile = File
 
 import hashlib
 import json
+import gzip
+import base64
 
 @app.post("/api/routes")
 async def save_route(request: Request):
@@ -202,9 +212,11 @@ async def save_route(request: Request):
 
         # Create route document if new
         if not route_id:
+            # Compress GPX to fit Firestore's 1MB field limit
+            gpx_compressed = base64.b64encode(gzip.compress(gpx_raw.encode())).decode() if gpx_raw else ""
             route_doc = {
                 "gpx_hash": gpx_hash,
-                "gpx_raw": gpx_raw,
+                "gpx_compressed": gpx_compressed,
                 "name": score_data.get("name", "Unnamed Route"),
                 "date": score_data.get("date", ""),
                 "composite": score_data.get("composite", 0),
@@ -247,6 +259,8 @@ async def save_route(request: Request):
         return JSONResponse({"status": "saved", "route_id": route_id})
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return JSONResponse({"error": str(e)}, status_code=500)
 
 

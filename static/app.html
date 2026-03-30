@@ -411,6 +411,61 @@
   }
   .strava-btn:hover { background: #E34402; }
   .strava-btn svg { width: 18px; height: 18px; }
+  .signin-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #2563EB;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .signin-btn:hover { background: #1D4ED8; }
+  /* Magic link email form */
+  .magic-link-form {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+  .magic-link-form input[type="email"] {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .magic-link-form input[type="email"]:focus {
+    border-color: #2563EB;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  }
+  .magic-link-form button {
+    padding: 10px 20px;
+    background: #2563EB;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+  }
+  .magic-link-form button:hover { background: #1D4ED8; }
+  .magic-link-form button:disabled { background: #93C5FD; cursor: not-allowed; }
+  .magic-link-sent {
+    color: #059669;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 8px 0;
+  }
   .user-info {
     display: flex;
     align-items: center;
@@ -475,6 +530,20 @@
     padding: 12px 32px;
     width: 100%;
     justify-content: center;
+  }
+  .modal .magic-link-form {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .modal .magic-link-form input[type="email"] {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 1rem;
+  }
+  .modal .magic-link-form button {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
   }
   .modal .value-props {
     text-align: left;
@@ -848,10 +917,7 @@
       </svg>
     </div>
     <div class="nav-auth" id="navAuth">
-      <a href="/api/auth/strava" class="strava-btn">
-        <svg viewBox="0 0 24 24" fill="white"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-        Sign in with Strava
-      </a>
+      <button class="signin-btn" onclick="showSignInModal()">Sign in</button>
     </div>
   </div>
   <p class="subtitle">Drop a GPX file to score how hilly your route really is.</p>
@@ -860,18 +926,33 @@
   <div class="modal-overlay" id="gateModal">
     <div class="modal">
       <h2>You're hooked. We knew it.</h2>
-      <p>Sign in to unlock the full VertHurt experience.</p>
+      <p>Enter your email to unlock the full VertHurt experience.</p>
       <ul class="value-props">
         <li>Compare routes side by side</li>
         <li>Save routes to your personal library</li>
         <li>Share branded Score Cards</li>
         <li>Unlimited route scoring</li>
       </ul>
-      <a href="/api/auth/strava" class="strava-btn" id="gateStravaBtn">
-        <svg viewBox="0 0 24 24" fill="white"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-        Continue with Strava
-      </a>
+      <form class="magic-link-form" id="gateMagicForm" onsubmit="handleGateMagicLink(event)">
+        <input type="email" placeholder="you@example.com" required id="gateEmail">
+        <button type="submit" id="gateSubmitBtn">Send login link</button>
+      </form>
+      <div id="gateMagicStatus"></div>
       <button class="modal-close" id="gateClose">Maybe later</button>
+    </div>
+  </div>
+
+  <!-- Sign-in Modal (from nav button) -->
+  <div class="modal-overlay" id="signInModal">
+    <div class="modal">
+      <h2>Sign in to VertHurt</h2>
+      <p>We'll send you a magic link — no password needed.</p>
+      <form class="magic-link-form" id="signInMagicForm" onsubmit="handleSignInMagicLink(event)">
+        <input type="email" placeholder="you@example.com" required id="signInEmail">
+        <button type="submit" id="signInSubmitBtn">Send login link</button>
+      </form>
+      <div id="signInMagicStatus"></div>
+      <button class="modal-close" onclick="document.getElementById('signInModal').classList.remove('visible')">Cancel</button>
     </div>
   </div>
 
@@ -1096,9 +1177,9 @@ function shouldGate(action) {
 
 function showGateModal(pendingAction) {
   // Save pending action + route data for post-auth resumption
+  // With magic link, user clicks email link which opens /app.html in same or new tab
+  // so we use localStorage (persists across tabs) to stash the pending action
   if (pendingAction) {
-    // For compare actions, pendingGpxFiles is already set by the caller
-    // For save actions, stash current scored routes + raw GPX
     if (!pendingAction.pendingGpxFiles && loadedRoutes.length > 0) {
       pendingAction.routes = loadedRoutes.map(r => {
         const slim = {...r};
@@ -1114,6 +1195,14 @@ function showGateModal(pendingAction) {
       console.error('Failed to stash pending action:', e);
     }
   }
+  // Reset gate modal form state
+  const gateEmail = document.getElementById('gateEmail');
+  const gateStatus = document.getElementById('gateMagicStatus');
+  const gateBtn = document.getElementById('gateSubmitBtn');
+  if (gateEmail) gateEmail.value = '';
+  if (gateStatus) gateStatus.innerHTML = '';
+  if (gateBtn) { gateBtn.disabled = false; gateBtn.textContent = 'Send login link'; }
+
   document.getElementById('gateModal').classList.add('visible');
   posthog.capture('gate_modal_shown', { trigger: pendingAction?.type || 'unknown', score_count: getScoreCount() });
 }
@@ -1125,20 +1214,92 @@ function hideGateModal() {
 function updateNavAuth() {
   const nav = document.getElementById('navAuth');
   if (currentUser) {
+    const initials = (currentUser.name || currentUser.email || '?').charAt(0).toUpperCase();
     nav.innerHTML = `
       <div class="user-info" onclick="showEditProfileModal()" style="cursor:pointer;" title="Edit profile">
-        ${currentUser.avatar ? `<img src="${currentUser.avatar}" class="user-avatar" alt="">` : ''}
-        <span class="user-name">${currentUser.name}</span>
+        ${currentUser.avatar ? `<img src="${currentUser.avatar}" class="user-avatar" alt="">` :
+          `<div class="user-avatar" style="background:#2563EB;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;border-radius:50%;width:32px;height:32px;">${initials}</div>`}
+        <span class="user-name">${currentUser.name || currentUser.email || 'User'}</span>
       </div>
       <button class="logout-btn" onclick="handleLogout()">Log out</button>
     `;
   } else {
-    nav.innerHTML = `
-      <a href="/api/auth/strava" class="strava-btn">
-        <svg viewBox="0 0 24 24" fill="white"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-        Sign in with Strava
-      </a>
-    `;
+    nav.innerHTML = `<button class="signin-btn" onclick="showSignInModal()">Sign in</button>`;
+  }
+}
+
+function showSignInModal() {
+  // Stash current routes so they survive the magic link redirect
+  _stashCurrentRoutes();
+  document.getElementById('signInEmail').value = '';
+  document.getElementById('signInMagicStatus').innerHTML = '';
+  document.getElementById('signInSubmitBtn').disabled = false;
+  document.getElementById('signInSubmitBtn').textContent = 'Send login link';
+  document.getElementById('signInModal').classList.add('visible');
+}
+
+function _stashCurrentRoutes() {
+  // Save any scored routes + raw GPX so they survive auth redirect
+  if (loadedRoutes.length > 0) {
+    const pending = {
+      type: 'restore',
+      routes: loadedRoutes.map(r => {
+        const slim = {...r};
+        delete slim.profile;
+        delete slim.bandColors;
+        return slim;
+      }),
+      gpxRaw: rawGpxStore,
+    };
+    try {
+      localStorage.setItem('verthurt_pending_action', JSON.stringify(pending));
+    } catch (e) {
+      console.error('Failed to stash routes:', e);
+    }
+  }
+}
+
+async function handleSignInMagicLink(e) {
+  e.preventDefault();
+  const email = document.getElementById('signInEmail').value.trim();
+  const btn = document.getElementById('signInSubmitBtn');
+  const status = document.getElementById('signInMagicStatus');
+  await _sendMagicLink(email, btn, status);
+}
+
+async function handleGateMagicLink(e) {
+  e.preventDefault();
+  const email = document.getElementById('gateEmail').value.trim();
+  const btn = document.getElementById('gateSubmitBtn');
+  const status = document.getElementById('gateMagicStatus');
+  await _sendMagicLink(email, btn, status);
+}
+
+async function _sendMagicLink(email, btn, statusEl) {
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  statusEl.innerHTML = '';
+
+  try {
+    const resp = await fetch('/api/auth/magic-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await resp.json();
+    if (resp.ok) {
+      statusEl.innerHTML = '<div class="magic-link-sent">Check your email for a login link!</div>';
+      btn.textContent = 'Sent!';
+      posthog.capture('magic_link_sent', { email });
+    } else {
+      statusEl.innerHTML = `<div style="color:#EF4444;font-size:0.875rem;padding:8px 0;">${data.error || 'Something went wrong.'}</div>`;
+      btn.disabled = false;
+      btn.textContent = 'Send login link';
+    }
+  } catch (err) {
+    statusEl.innerHTML = '<div style="color:#EF4444;font-size:0.875rem;padding:8px 0;">Network error. Please try again.</div>';
+    btn.disabled = false;
+    btn.textContent = 'Send login link';
   }
 }
 
@@ -1409,6 +1570,28 @@ async function resumePendingAction() {
         } catch (e) {
           console.error('Auto-save after auth failed:', e);
         }
+      }
+    }
+    // Resume restore: re-score all stashed routes and display (from voluntary sign-in)
+    if (action.type === 'restore' && action.gpxRaw) {
+      const gpxEntries = Object.entries(action.gpxRaw);
+      loadedRoutes = [];
+      rawGpxStore = {};
+
+      for (let i = 0; i < gpxEntries.length; i++) {
+        const gpxText = gpxEntries[i][1];
+        const fileName = (action.routes && action.routes[i] ? action.routes[i].name : 'route_' + i) + '.gpx';
+        const result = await reScoreGpx(gpxText, fileName);
+        if (result) {
+          const idx = loadedRoutes.length;
+          loadedRoutes.push(result);
+          rawGpxStore[idx] = gpxText;
+        }
+      }
+
+      if (loadedRoutes.length > 0) {
+        updateUI();
+        posthog.capture('routes_restored', { routes: loadedRoutes.length, source: 'post_auth_restore' });
       }
     }
   } catch (e) {
@@ -1905,7 +2088,7 @@ async function loadMyRoutes() {
   try {
     const resp = await fetch('/api/routes');
     if (resp.status === 401) {
-      grid.innerHTML = '<div class="empty-routes"><p>Sign in with Strava to save and view your routes.</p></div>';
+      grid.innerHTML = '<div class="empty-routes"><p>Sign in to save and view your routes.</p></div>';
       return;
     }
     if (!resp.ok) {
