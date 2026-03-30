@@ -63,19 +63,27 @@
     padding: 48px 24px;
     text-align: center;
     cursor: pointer;
-    transition: all 0.4s ease;
+    transition: all 0.8s ease;
     background: #FFFFFF;
     margin-bottom: 16px;
     overflow: hidden;
   }
   .dropzone.compact {
     padding: 16px 24px;
+    transition: all 0.8s ease;
   }
   .dropzone.compact .dropzone-icon {
-    display: none;
+    opacity: 0;
+    max-height: 0;
+    margin: 0;
+    transition: all 0.5s ease;
+    overflow: hidden;
   }
   .dropzone.compact .dropzone-subtitle {
-    display: none;
+    opacity: 0;
+    max-height: 0;
+    transition: all 0.5s ease;
+    overflow: hidden;
   }
   .dropzone:hover, .dropzone.dragover {
     border-color: #2563EB;
@@ -574,6 +582,59 @@
     border: none;
   }
   .modal-close:hover { color: #6B7280; }
+
+  /* Loading overlay */
+  .loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(248,249,250,0.7);
+    z-index: 200;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(4px);
+  }
+  .loading-overlay.visible { display: flex; }
+  .loading-content {
+    text-align: center;
+    animation: fadeInUp 0.3s ease;
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .loading-mountain {
+    margin-bottom: 24px;
+  }
+  .mountain-path {
+    stroke-dasharray: 600;
+    stroke-dashoffset: 600;
+    animation: drawMountain 2s ease forwards;
+  }
+  @keyframes drawMountain {
+    to { stroke-dashoffset: 0; }
+  }
+  .mountain-fill {
+    animation: fillMountain 1s ease 1.5s forwards;
+  }
+  @keyframes fillMountain {
+    to { opacity: 1; }
+  }
+  .loading-text {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1F2937;
+    margin-bottom: 8px;
+  }
+  .loading-subtext {
+    font-size: 0.875rem;
+    color: #6B7280;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
 
   /* Save/Share buttons on score card */
   .card-actions {
@@ -1087,6 +1148,35 @@
     </div>
   </div>
 
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-content">
+      <svg class="loading-mountain" viewBox="0 0 200 120" width="200" height="120">
+        <!-- Mountain silhouette that draws itself -->
+        <path class="mountain-path" d="M0,110 L30,80 L50,90 L80,40 L100,20 L120,50 L140,35 L160,70 L180,60 L200,110"
+          fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Filled mountain behind (fades in) -->
+        <path class="mountain-fill" d="M0,110 L30,80 L50,90 L80,40 L100,20 L120,50 L140,35 L160,70 L180,60 L200,110 Z"
+          fill="url(#loadGrad)" opacity="0"/>
+        <!-- Climber dot -->
+        <circle class="climber-dot" r="4" fill="#059669">
+          <animateMotion dur="2.5s" repeatCount="indefinite" keyPoints="0;1" keyTimes="0;1" calcMode="linear">
+            <mpath href="#climberRoute"/>
+          </animateMotion>
+        </circle>
+        <path id="climberRoute" d="M0,110 L30,80 L50,90 L80,40 L100,20 L120,50 L140,35 L160,70 L180,60 L200,110" fill="none"/>
+        <defs>
+          <linearGradient id="loadGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#2563EB" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#2563EB" stop-opacity="0.02"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <div class="loading-text">Calculating your VertHurt...</div>
+      <div class="loading-subtext" id="loadingSubtext">Analyzing elevation profile</div>
+    </div>
+  </div>
+
   <!-- Tabs row with GPX help link -->
   <div class="tabs-row">
     <div class="tabs" id="tabBar" style="display:none">
@@ -1209,6 +1299,32 @@ function showGateModal(pendingAction) {
 
 function hideGateModal() {
   document.getElementById('gateModal').classList.remove('visible');
+}
+
+const loadingMessages = [
+  'Analyzing elevation profile',
+  'Measuring the climb',
+  'Counting the switchbacks',
+  'Crunching the vert',
+  'Grading the gradients',
+];
+let loadingMsgInterval;
+
+function showLoading() {
+  const overlay = document.getElementById('loadingOverlay');
+  const subtext = document.getElementById('loadingSubtext');
+  let msgIdx = 0;
+  subtext.textContent = loadingMessages[0];
+  overlay.classList.add('visible');
+  loadingMsgInterval = setInterval(() => {
+    msgIdx = (msgIdx + 1) % loadingMessages.length;
+    subtext.textContent = loadingMessages[msgIdx];
+  }, 2000);
+}
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('visible');
+  clearInterval(loadingMsgInterval);
 }
 
 function updateNavAuth() {
@@ -1497,6 +1613,10 @@ async function resumePendingAction() {
   try {
     const action = JSON.parse(pending);
 
+    // Show loading animation for all resume types that re-score
+    const hasGpxToScore = action.pendingGpxFiles || action.gpxRaw;
+    if (hasGpxToScore) showLoading();
+
     // Helper: re-score a raw GPX string and return the result
     async function reScoreGpx(gpxText, fileName) {
       const formData = new FormData();
@@ -1523,6 +1643,7 @@ async function resumePendingAction() {
         }
       }
 
+      hideLoading();
       if (loadedRoutes.length > 0) {
         updateUI();
         posthog.capture('compare_resumed', { routes: loadedRoutes.length, source: 'post_auth_resume' });
@@ -1538,6 +1659,7 @@ async function resumePendingAction() {
       if (gpxRaw) {
         try {
           const fullRoute = await reScoreGpx(gpxRaw, (route.name || 'route') + '.gpx');
+          hideLoading();
           if (fullRoute) {
             loadedRoutes = [fullRoute];
             rawGpxStore = { 0: gpxRaw };
@@ -1555,9 +1677,11 @@ async function resumePendingAction() {
             }
           }
         } catch (e) {
+          hideLoading();
           console.error('Re-score after auth failed:', e);
         }
       } else {
+        hideLoading();
         try {
           const resp = await fetch('/api/routes', {
             method: 'POST',
@@ -1589,12 +1713,14 @@ async function resumePendingAction() {
         }
       }
 
+      hideLoading();
       if (loadedRoutes.length > 0) {
         updateUI();
         posthog.capture('routes_restored', { routes: loadedRoutes.length, source: 'post_auth_restore' });
       }
     }
   } catch (e) {
+    hideLoading();
     console.error('Resume pending action error:', e);
   }
 }
@@ -1941,12 +2067,16 @@ function handleFiles(files) {
     // Read raw GPX for saving later
     const rawGpx = await file.text();
 
+    // Show loading animation
+    showLoading();
+
     // Upload to server for scoring
     const formData = new FormData();
     formData.append('file', file);
 
     try {
       const resp = await fetch('/api/score', { method: 'POST', body: formData });
+      hideLoading();
       if (!resp.ok) {
         const err = await resp.json();
         console.error('Scoring error:', err.error);
@@ -1976,6 +2106,7 @@ function handleFiles(files) {
 
       updateUI();
     } catch (err) {
+      hideLoading();
       console.error('Failed to score route:', err);
     }
   });
