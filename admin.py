@@ -1,0 +1,352 @@
+"""Admin API endpoints for VertHurt."""
+
+import time
+from datetime import datetime, timezone, timedelta
+import gzip
+import base64
+from fastapi import Request
+from fastapi.responses import JSONResponse, Response
+from google.cloud import firestore
+
+from auth import get_current_user
+
+db = firestore.Client(project="hilliness-analyzer")
+
+# Bootstrap: To create the first admin, set is_admin=True in Firestore console:
+# db.collection("users").document("<user_doc_id>").update({"is_admin": True})
+# Doc ID is email with @ and . replaced: e.g., "dov_at_tarheelabs_com"
+
+
+import math
+
+def _sort_key(item: dict, field: str):
+    """Return a sortable key — handles numbers, strings, and missing values."""
+    val = item.get(field)
+    if val is None:
+        return ""
+    return val
+
+
+def _sanitize(data):
+    """Replace inf/nan float values with None for JSON serialization, recursively."""
+    if isinstance(data, dict):
+        return {k: _sanitize(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [_sanitize(v) for v in data]
+    elif isinstance(data, float) and (math.isinf(data) or math.isnan(data)):
+        return None
+    return data
+
+
+async def _require_admin(request: Request) -> dict | None:
+    """Verify user is authenticated AND is_admin in Firestore. Returns user or None."""
+    user = get_current_user(request)
+    if not user:
+        return None
+
+    # Always re-check Firestore (not just JWT) for security
+    user_doc = db.collection("users").document(user["user_id"]).get()
+    if not user_doc.exists or not user_doc.to_dict().get("is_admin", False):
+        return None
+
+    return user
+
+
+# ============ DASHBOARD ============
+
+async def admin_stats(request: Request):
+    """Dashboard summary stats."""
+    admin = await _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    now = time.time()
+    seven_days_ago = now - 7 * 86400
+    thirty_days_ago = now - 30 * 86400
+
+    users = [doc.to_dict() for doc in db.collection("users").stream()]
+    total_users = len(users)
+    new_7d = sum(1 for u in users if u.get("created_at", 0) > seven_days_ago)
+    new_30d = sum(1 for u in users if u.get("created_at", 0) > thirty_days_ago)
+
+    total_routes = sum(1 for _ in db.collection("routes").stream())
+    total_scored = sum(1 for _ in db.collection("scored_routes").stream())
+    total_waitlist = sum(1 for _ in db.collection("waitlist").stream())
+
+    return JSONResponse({
+        "total_users": total_users,
+        "new_users_7d": new_7d,
+        "new_users_30d": new_30d,
+        "total_routes": total_routes,
+        "total_scored_routes": total_scored,
+        "total_waitlist": total_waitlist,
+    })
+
+
+# ============ USER MANAGEMENT ============
+
+async def admin_list_users(request: Request):
+    """List all users with search, sort, pagination."""
+    admin = await _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    q = request.query_params.get("q", "").lower()
+    sort_field = request.query_params.get("sort", "created_at")
+    order = request.query_params.get("order", "desc")
+    page = int(request.query_params.get("page", 1))
+    per_page = int(request.query_params.get("per_page", 25))
+
+    # Fetch all users
+    users = []
+    for doc in db.collection("users").stream():
+        data = doc.to_dict()
+        data["doc_id"] = doc.id
+        users.append(data)
+
+    # Search filter
+    if q:
+        users = [u for u in users if
+                 q in u.get("email", "").lower() or
+                 q in u.get("name", "").lower() or
+                 q in u.get("first_name", "").lower() or
+                 q in u.get("last_name", "").lower()]
+
+    # Sort
+    reverse = order == "desc"
+    users.sort(key=lambda u: _sort_key(u, sort_field), reverse=reverse)
+
+    # Paginate
+    total = len(users)
+    start = (page - 1) * per_page
+    users = users[start:start + per_page]
+
+    # Clean up for response
+    result = []
+    for u in users:
+        result.append({
+            "doc_id": u.get("doc_id", ""),
+            "email": u.get("email", ""),
+            "first_name": u.get("first_name", ""),
+            "last_name": u.get("last_name", ""),
+            "name": u.get("name", ""),
+            "auth_method": u.get("auth_method", ""),
+            "is_admin": u.get("is_admin", False),
+            "profile_complete": u.get("profile_complete", False),
+            "created_at": u.get("created_at", 0),
+            "last_login": u.get("last_login", 0),
+        })
+
+    return JSONResponse({
+        "users": result,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": max(1, (total + per_page - 1) // per_page),
+    })
+
+
+async def admin_get_user(request: Request):
+    """Get single user detail."""
+    admin = await _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    user_id = request.path_params["user_id"]
+    doc = db.collection("users").document(user_id).get()
+
+    if not doc.exists:
+        return JSONResponse({"error": "User not found"}, status_code=404)
+
+    data = doc.to_dict()
+    data["doc_id"] = doc.id
+
+    # Get route count for this user
+    route_links = list(db.collection("user_routes").where("user_id", "==", user_id).stream())
+    data["route_count"] = len(route_links)
+
+    return JSONResponse(data)
+
+
+async def admin_update_user(request: Request):
+    """Update user fields (name, email, is_admin)."""
+    admin = await _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    user_id = request.path_params["user_id"]
+    body = await request.json()
+
+    # Self-demotion protection
+    if user_id == admin["user_id"] and "is_admin" in body and not body["is_admin"]:
+        return JSONResponse({"error": "Cannot remove your own admin access"}, status_code=400)
+
+    user_ref = db.collection("users").document(user_id)
+    doc = user_ref.get()
+    if not doc.exists:
+        return JSONResponse({"error": "User not found"}, status_code=404)
+
+    # Only update allowed fields
+    allowed = {"first_name", "last_name", "email", "is_admin"}
+    updates = {k: v for k, v in body.items() if k in allowed}
+
+    if "first_name" in updates or "last_name" in updates:
+        existing = doc.to_dict()
+        fn = updates.get("first_name", existing.get("first_name", ""))
+        ln = updates.get("last_name", existing.get("last_name", ""))
+        updates["name"] = f"{fn} {ln}".strip()
+
+    if updates:
+        user_ref.update(updates)
+
+    return JSONResponse({"status": "updated", "fields": list(updates.keys())})
+
+
+async def admin_delete_user(request: Request):
+    """Delete user and their route links. Cannot delete yourself."""
+    admin = await _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    user_id = request.path_params["user_id"]
+
+    if user_id == admin["user_id"]:
+        return JSONResponse({"error": "Cannot delete your own account from admin"}, status_code=400)
+
+    doc = db.collection("users").document(user_id).get()
+    if not doc.exists:
+        return JSONResponse({"error": "User not found"}, status_code=404)
+
+    # Delete user_routes links
+    links = db.collection("user_routes").where("user_id", "==", user_id).stream()
+    for link in links:
+        link.reference.delete()
+
+    # Delete user doc
+    db.collection("users").document(user_id).delete()
+
+    return JSONResponse({"status": "deleted"})
+
+
+# ============ ROUTE MANAGEMENT ============
+
+async def admin_list_routes(request: Request):
+    """List all routes with search, sort, pagination."""
+    admin = await _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    q = request.query_params.get("q", "").lower()
+    sort_field = request.query_params.get("sort", "created_at")
+    order = request.query_params.get("order", "desc")
+    page = int(request.query_params.get("page", 1))
+    per_page = int(request.query_params.get("per_page", 25))
+
+    routes = []
+    for doc in db.collection("routes").stream():
+        data = _sanitize(doc.to_dict())
+        data["doc_id"] = doc.id
+        # Strip large fields
+        data.pop("gpx_compressed", None)
+        data.pop("gpx_raw", None)
+        data.pop("profile", None)
+        routes.append(data)
+
+    if q:
+        routes = [r for r in routes if q in r.get("name", "").lower()]
+
+    reverse = order == "desc"
+    routes.sort(key=lambda r: _sort_key(r, sort_field), reverse=reverse)
+
+    total = len(routes)
+    start = (page - 1) * per_page
+    routes = routes[start:start + per_page]
+
+    return JSONResponse({
+        "routes": routes,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": max(1, (total + per_page - 1) // per_page),
+    })
+
+
+async def admin_list_scored_routes(request: Request):
+    """List all anonymously scored routes."""
+    admin = await _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    q = request.query_params.get("q", "").lower()
+    sort_field = request.query_params.get("sort", "scored_at")
+    order = request.query_params.get("order", "desc")
+    page = int(request.query_params.get("page", 1))
+    per_page = int(request.query_params.get("per_page", 25))
+
+    routes = []
+    for doc in db.collection("scored_routes").stream():
+        data = _sanitize(doc.to_dict())
+        data["doc_id"] = doc.id
+        data.pop("gpx_compressed", None)
+        data.pop("gpx_raw", None)
+        data.pop("profile", None)
+        routes.append(data)
+
+    if q:
+        routes = [r for r in routes if q in r.get("name", "").lower()]
+
+    reverse = order == "desc"
+    routes.sort(key=lambda r: _sort_key(r, sort_field), reverse=reverse)
+
+    total = len(routes)
+    start = (page - 1) * per_page
+    routes = routes[start:start + per_page]
+
+    return JSONResponse({
+        "routes": routes,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": max(1, (total + per_page - 1) // per_page),
+    })
+
+
+# ============ GPX DOWNLOAD ============
+
+async def admin_download_gpx(request: Request):
+    """Download GPX file for a route."""
+    admin = await _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    collection = request.query_params.get("collection", "routes")
+    doc_id = request.path_params["doc_id"]
+
+    if collection not in ("routes", "scored_routes"):
+        return JSONResponse({"error": "Invalid collection"}, status_code=400)
+
+    doc = db.collection(collection).document(doc_id).get()
+    if not doc.exists:
+        return JSONResponse({"error": "Not found"}, status_code=404)
+
+    data = doc.to_dict()
+    gpx_xml = None
+
+    if data.get("gpx_compressed"):
+        try:
+            gpx_xml = gzip.decompress(base64.b64decode(data["gpx_compressed"])).decode()
+        except Exception:
+            pass
+
+    if not gpx_xml and data.get("gpx_raw"):
+        gpx_xml = data["gpx_raw"]
+
+    if not gpx_xml:
+        return JSONResponse({"error": "No GPX data available"}, status_code=404)
+
+    name = data.get("name", "route").replace(" ", "_")
+    return Response(
+        content=gpx_xml,
+        media_type="application/gpx+xml",
+        headers={"Content-Disposition": f'attachment; filename="{name}.gpx"'},
+    )
