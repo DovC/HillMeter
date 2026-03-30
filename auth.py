@@ -39,6 +39,7 @@ def _make_jwt(user_data: dict) -> str:
         "avatar": user_data.get("avatar", ""),
         "profile_complete": user_data.get("profile_complete", False),
         "auth_method": user_data.get("auth_method", "magic_link"),
+        "is_admin": user_data.get("is_admin", False),
         "iat": int(time.time()),
         "exp": int(time.time()) + JWT_EXPIRY_SECONDS,
     }
@@ -60,6 +61,7 @@ def get_current_user(request: Request) -> dict | None:
             "avatar": payload.get("avatar", ""),
             "profile_complete": payload.get("profile_complete", False),
             "auth_method": payload.get("auth_method", "strava"),
+            "is_admin": payload.get("is_admin", False),
         }
     except Exception:
         return None
@@ -166,6 +168,7 @@ async def verify_magic_link(request: Request):
             "avatar": "",
             "profile_complete": fs_data.get("profile_complete", False),
             "auth_method": "magic_link",
+            "is_admin": fs_data.get("is_admin", False),
         }
     else:
         user_data = {
@@ -320,6 +323,7 @@ async def get_me(request: Request):
         user["first_name"] = fs_data.get("first_name", "")
         user["last_name"] = fs_data.get("last_name", "")
         user["email"] = fs_data.get("email", "")
+        user["is_admin"] = fs_data.get("is_admin", False)
         if not user["first_name"] and user.get("name"):
             parts = user["name"].split(" ", 1)
             user["first_name"] = parts[0]

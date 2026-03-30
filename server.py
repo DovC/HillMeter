@@ -4,11 +4,13 @@ load_dotenv()  # Load .env BEFORE other imports that read env vars
 from fastapi import FastAPI, Request, UploadFile, File, Form, BackgroundTasks
 import xml.etree.ElementTree as ET
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response, RedirectResponse
 from google.cloud import firestore
 from datetime import datetime
 from scoring import compute_score
 from auth import strava_login, strava_callback, get_me, logout, update_profile, delete_account, get_current_user, send_magic_link, verify_magic_link
+from admin import (admin_stats, admin_list_users, admin_get_user, admin_update_user,
+                   admin_delete_user, admin_list_routes, admin_list_scored_routes, admin_download_gpx)
 import httpx
 import os
 import re
@@ -84,6 +86,16 @@ app.add_api_route("/api/auth/me", get_me, methods=["GET"])
 app.add_api_route("/api/auth/profile", update_profile, methods=["POST"])
 app.add_api_route("/api/auth/account", delete_account, methods=["DELETE"])
 app.add_api_route("/api/auth/logout", logout, methods=["POST"])
+
+# ============ ADMIN API ============
+app.add_api_route("/api/admin/stats", admin_stats, methods=["GET"])
+app.add_api_route("/api/admin/users", admin_list_users, methods=["GET"])
+app.add_api_route("/api/admin/users/{user_id}", admin_get_user, methods=["GET"])
+app.add_api_route("/api/admin/users/{user_id}", admin_update_user, methods=["PUT"])
+app.add_api_route("/api/admin/users/{user_id}", admin_delete_user, methods=["DELETE"])
+app.add_api_route("/api/admin/routes", admin_list_routes, methods=["GET"])
+app.add_api_route("/api/admin/scored-routes", admin_list_scored_routes, methods=["GET"])
+app.add_api_route("/api/admin/download/{doc_id}", admin_download_gpx, methods=["GET"])
 
 # ============ SCORING API ============
 
@@ -376,6 +388,16 @@ async def posthog_proxy(path: str, request: Request):
 # Serve HTML files with no-cache headers, static assets normally
 from fastapi.responses import FileResponse
 import os
+
+@app.get("/admin.html")
+async def serve_admin(request: Request):
+    user = get_current_user(request)
+    if not user or not user.get("is_admin"):
+        return RedirectResponse(url="/app.html", status_code=302)
+    return FileResponse("static/admin.html", headers={
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache"
+    })
 
 @app.get("/app.html")
 async def serve_app():

@@ -1340,6 +1340,7 @@ function updateNavAuth() {
   if (currentUser) {
     const initials = (currentUser.name || currentUser.email || '?').charAt(0).toUpperCase();
     nav.innerHTML = `
+      ${currentUser.is_admin ? '<a href="/admin.html" style="color:#2563EB;font-size:0.875rem;margin-right:12px;text-decoration:none;font-weight:500;">Admin</a>' : ''}
       <div class="user-info" onclick="showEditProfileModal()" style="cursor:pointer;" title="Edit profile">
         ${currentUser.avatar ? `<img src="${currentUser.avatar}" class="user-avatar" alt="">` :
           `<div class="user-avatar" style="background:#2563EB;color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;border-radius:50%;width:32px;height:32px;">${initials}</div>`}
