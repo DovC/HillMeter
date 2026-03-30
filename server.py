@@ -124,13 +124,6 @@ def _save_anonymous_route(result, gpx_xml: str):
         gpx_hash = hashlib.sha256(gpx_xml.encode()).hexdigest()[:16]
         fingerprint = _gpx_fingerprint(gpx_xml, result.total_dist_km)
 
-        # Skip if we already have a route with this fuzzy fingerprint
-        if fingerprint:
-            existing = db.collection("scored_routes") \
-                .where("fingerprint", "==", fingerprint).limit(1).get()
-            if list(existing):
-                return
-
         gpx_compressed = base64.b64encode(gzip.compress(gpx_xml.encode())).decode()
         db.collection("scored_routes").add({
             "fingerprint": fingerprint,
