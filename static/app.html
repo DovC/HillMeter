@@ -35,6 +35,10 @@
     max-width: 960px;
     margin: 0 auto;
     padding: 24px 24px;
+    transition: max-width 0.3s ease;
+  }
+  .container.has-sidebar {
+    max-width: 1240px;
   }
 
   .logo-container {
@@ -739,6 +743,133 @@
     text-align: center; padding: 48px 24px; color: #9CA3AF;
   }
 
+  /* Score tab layout with sidebar */
+  .score-tab-layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+  .score-tab-main {
+    width: 100%;
+  }
+  .score-tab-main {
+    flex: 1;
+    min-width: 0;
+  }
+  .saved-routes-sidebar {
+    display: none;
+  }
+  .saved-routes-sidebar.visible {
+    display: block;
+    width: 240px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 24px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sidebar-header {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0 4px 8px;
+  }
+  .sidebar-route-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .sidebar-route-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border-left: 3px solid transparent;
+  }
+  .sidebar-route-item:hover {
+    background: #F3F4F6;
+  }
+  .sidebar-route-item.active {
+    border-left-color: #2563EB;
+    background: #EFF6FF;
+  }
+  .sidebar-route-item.loading {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  .sidebar-score-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #FFFFFF;
+    flex-shrink: 0;
+  }
+  .sidebar-route-info {
+    min-width: 0;
+    flex: 1;
+  }
+  .sidebar-route-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #374151;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sidebar-route-meta {
+    font-size: 0.6875rem;
+    color: #9CA3AF;
+  }
+  .sidebar-empty {
+    text-align: center;
+    padding: 24px 12px;
+    color: #9CA3AF;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+
+  /* Mobile: sidebar becomes horizontal scroll row */
+  @media (max-width: 899px) {
+    .score-tab-layout {
+      flex-direction: column;
+      gap: 12px;
+    }
+    .saved-routes-sidebar.visible {
+      width: 100%;
+      position: static;
+      max-height: none;
+      overflow-y: visible;
+    }
+    .sidebar-header {
+      padding: 0 0 6px;
+    }
+    .sidebar-route-list {
+      flex-direction: row;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      gap: 8px;
+      padding-bottom: 4px;
+    }
+    .sidebar-route-item {
+      flex-shrink: 0;
+      min-width: 160px;
+      max-width: 200px;
+    }
+  }
+
   /* Tooltip on component scores */
   .component {
     position: relative;
@@ -1188,18 +1319,27 @@
 
   <!-- Score tab content -->
   <div id="scoreTab">
-    <div class="dropzone" id="dropzone">
-      <div class="dropzone-icon">&#x26F0;</div>
-      <div class="dropzone-text"><strong>Drop GPX files here</strong> or click to browse</div>
-      <div class="dropzone-subtitle">Score how hilly your route really is</div>
-    </div>
-    <input type="file" id="fileInput" accept=".gpx" multiple>
+    <div class="score-tab-layout">
+      <div class="score-tab-main">
+        <div class="dropzone" id="dropzone">
+          <div class="dropzone-icon">&#x26F0;</div>
+          <div class="dropzone-text"><strong>Drop GPX files here</strong> or click to browse</div>
+          <div class="dropzone-subtitle">Score how hilly your route really is</div>
+        </div>
+        <input type="file" id="fileInput" accept=".gpx" multiple>
 
-    <div class="loaded-files" id="loadedFiles"></div>
+        <div class="loaded-files" id="loadedFiles"></div>
 
-    <div class="results-section" id="results">
-      <div class="comparison" id="comparison"></div>
-      <div id="profiles"></div>
+        <div class="results-section" id="results">
+          <div class="comparison" id="comparison"></div>
+          <div id="profiles"></div>
+        </div>
+      </div>
+
+      <aside class="saved-routes-sidebar" id="savedRoutesSidebar">
+        <div class="sidebar-header">My Routes</div>
+        <div class="sidebar-route-list" id="sidebarRouteList"></div>
+      </aside>
     </div>
   </div>
 
@@ -1456,6 +1596,9 @@ async function checkAuth() {
         if (!currentUser.profile_complete) {
           showProfileModal(currentUser);
         }
+
+        // Load sidebar routes for compare feature
+        loadSidebarRoutes();
 
         // Check for pending action
         resumePendingAction();
@@ -1736,6 +1879,7 @@ async function resumePendingAction() {
 
 // Init auth check on load
 posthog.capture('$pageview');
+loadSidebarRoutes();  // Show sidebar hint for anon users; checkAuth will refresh for auth'd
 checkAuth();
 
 // Gate modal close button
@@ -2135,10 +2279,21 @@ function updateUI() {
   // Remove handler
   chipsDiv.querySelectorAll('.remove').forEach(btn => {
     btn.addEventListener('click', e => {
-      loadedRoutes.splice(parseInt(e.target.dataset.idx), 1);
+      const removedIdx = parseInt(e.target.dataset.idx);
+      loadedRoutes.splice(removedIdx, 1);
+      // Re-index rawGpxStore after removal
+      const newStore = {};
+      loadedRoutes.forEach((r, i) => {
+        const oldIdx = i >= removedIdx ? i + 1 : i;
+        if (rawGpxStore[oldIdx] !== undefined) newStore[i] = rawGpxStore[oldIdx];
+      });
+      rawGpxStore = newStore;
       updateUI();
     });
   });
+
+  // Keep sidebar active states in sync
+  renderSidebarItems();
 
   // Animate dropzone compact/expand
   const dz = document.getElementById('dropzone');
@@ -2190,6 +2345,7 @@ async function saveRoute(idx) {
       if (data.status !== 'already_saved') {
         posthog.capture('route_saved', { route_name: route.name, score: route.composite });
       }
+      loadSidebarRoutes();  // Refresh sidebar with new route
     } else {
       btn.textContent = 'Error';
     }
@@ -2214,9 +2370,130 @@ async function unsaveRoute(idx) {
       if (delBtn) delBtn.style.display = 'none';
       delete route._savedRouteId;
       posthog.capture('route_unsaved', { route_name: route.name });
+      loadSidebarRoutes();  // Refresh sidebar
     }
   } catch (err) {
     console.error('Unsave error:', err);
+  }
+}
+
+// ============ SAVED ROUTES SIDEBAR ============
+const scoreBadgeColors = {
+  'score-flat': '#059669',
+  'score-rolling': '#0891B2',
+  'score-hilly': '#D97706',
+  'score-mountainous': '#DC2626',
+};
+
+let sidebarRoutesCache = null;
+
+async function loadSidebarRoutes() {
+  const sidebar = document.getElementById('savedRoutesSidebar');
+  const list = document.getElementById('sidebarRouteList');
+
+  if (!isAuthenticated()) {
+    // Show sidebar with sign-in prompt as feature hint
+    sidebar.classList.add('visible');
+    document.querySelector('.container').classList.add('has-sidebar');
+    list.innerHTML = `<div class="sidebar-empty">
+      <div style="font-size:1.5rem;margin-bottom:8px;">&#x1F4BE;</div>
+      <div>Sign in to save routes and compare them side-by-side.</div>
+    </div>`;
+    return;
+  }
+
+  try {
+    const resp = await fetch('/api/routes');
+    if (!resp.ok) {
+      sidebar.classList.remove('visible');
+      document.querySelector('.container').classList.remove('has-sidebar');
+      return;
+    }
+    const data = await resp.json();
+    sidebarRoutesCache = data.routes;
+
+    if (data.routes.length === 0) {
+      sidebar.classList.add('visible');
+      document.querySelector('.container').classList.add('has-sidebar');
+      list.innerHTML = `<div class="sidebar-empty">
+        <div>No saved routes yet.</div>
+        <div style="margin-top:4px;">Score a route and hit Save to start your library.</div>
+      </div>`;
+      return;
+    }
+
+    sidebar.classList.add('visible');
+    document.querySelector('.container').classList.add('has-sidebar');
+    renderSidebarItems();
+  } catch (err) {
+    console.error('Sidebar load error:', err);
+  }
+}
+
+function renderSidebarItems() {
+  const list = document.getElementById('sidebarRouteList');
+  if (!sidebarRoutesCache) return;
+
+  list.innerHTML = '';
+  sidebarRoutesCache.forEach(route => {
+    const isActive = loadedRoutes.some(r => r._savedRouteId === route.id);
+    const distMi = (route.totalDist * 0.621371).toFixed(1);
+    const badgeColor = scoreBadgeColors[route.scoreClass] || '#6B7280';
+
+    const item = document.createElement('div');
+    item.className = 'sidebar-route-item' + (isActive ? ' active' : '');
+    item.dataset.routeId = route.id;
+    item.innerHTML = `
+      <div class="sidebar-score-badge" style="background:${badgeColor}">${route.composite}</div>
+      <div class="sidebar-route-info">
+        <div class="sidebar-route-name">${route.name}</div>
+        <div class="sidebar-route-meta">${distMi} mi · ${route.descriptor}</div>
+      </div>
+    `;
+    item.addEventListener('click', () => toggleSidebarRoute(route.id));
+    list.appendChild(item);
+  });
+}
+
+async function toggleSidebarRoute(routeId) {
+  const existingIdx = loadedRoutes.findIndex(r => r._savedRouteId === routeId);
+
+  if (existingIdx !== -1) {
+    // Remove from comparison
+    loadedRoutes.splice(existingIdx, 1);
+    // Re-index rawGpxStore after removal
+    const newStore = {};
+    loadedRoutes.forEach((r, i) => {
+      const oldIdx = i >= existingIdx ? i + 1 : i;
+      if (rawGpxStore[oldIdx] !== undefined) newStore[i] = rawGpxStore[oldIdx];
+    });
+    rawGpxStore = newStore;
+    updateUI();
+    renderSidebarItems();
+    posthog.capture('sidebar_route_toggled', { route_id: routeId, action: 'removed' });
+    return;
+  }
+
+  // Add to comparison — fetch full route data
+  const item = document.querySelector(`.sidebar-route-item[data-route-id="${routeId}"]`);
+  if (item) item.classList.add('loading');
+
+  try {
+    const resp = await fetch(`/api/routes/${routeId}`);
+    if (!resp.ok) {
+      if (item) item.classList.remove('loading');
+      return;
+    }
+    const route = await resp.json();
+    route._savedRouteId = routeId;
+    route._fromSidebar = true;
+    loadedRoutes.push(route);
+    updateUI();
+    renderSidebarItems();
+    posthog.capture('sidebar_route_toggled', { route_id: routeId, action: 'added' });
+  } catch (err) {
+    console.error('Toggle sidebar route error:', err);
+    if (item) item.classList.remove('loading');
   }
 }
 
@@ -2276,17 +2553,24 @@ async function loadMyRoutes() {
 }
 
 async function viewSavedRoute(routeId) {
+  // If already loaded, just switch to score tab
+  if (loadedRoutes.some(r => r._savedRouteId === routeId)) {
+    switchTab('score');
+    return;
+  }
+
   try {
     const resp = await fetch(`/api/routes/${routeId}`);
     if (!resp.ok) return;
     const route = await resp.json();
 
-    // Switch to score tab and render — mark as already saved
+    // Add to comparison (not replace) — mark as saved
     route._savedRouteId = routeId;
-    switchTab('score');
-    loadedRoutes.length = 0;
+    route._fromSidebar = true;
     loadedRoutes.push(route);
+    switchTab('score');
     updateUI();
+    renderSidebarItems();
   } catch (err) {
     console.error('View route error:', err);
   }
@@ -2299,6 +2583,7 @@ async function deleteRoute(routeId, linkId) {
     await fetch(`/api/routes/${routeId}`, { method: 'DELETE' });
     posthog.capture('route_deleted', { route_id: routeId });
     loadMyRoutes();  // Refresh
+    loadSidebarRoutes();  // Refresh sidebar
   } catch (err) {
     console.error('Delete error:', err);
   }
