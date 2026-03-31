@@ -1914,6 +1914,13 @@ function renderResults(results) {
     if (r.minEle < globalMinEle) globalMinEle = r.minEle;
     if (r.maxEle > globalMaxEle) globalMaxEle = r.maxEle;
   });
+  // Enforce minimum range so flat routes don't look artificially hilly
+  const MIN_GLOBAL_ELE_RANGE = 500; // meters (~1640ft)
+  if (globalMaxEle - globalMinEle < MIN_GLOBAL_ELE_RANGE) {
+    const mid = (globalMinEle + globalMaxEle) / 2;
+    globalMinEle = mid - MIN_GLOBAL_ELE_RANGE / 2;
+    globalMaxEle = mid + MIN_GLOBAL_ELE_RANGE / 2;
+  }
 
   results.forEach((r, idx) => {
     // Score card
@@ -2051,8 +2058,15 @@ function drawProfile(result, idx, globalMinE, globalMaxE) {
   const plotH = h - pad.top - pad.bottom;
 
   const maxDist = prof[prof.length - 1].dist;
-  const minE = (globalMinE != null ? globalMinE : Math.min(...prof.map(p => p.ele))) - 5;
-  const maxE = (globalMaxE != null ? globalMaxE : Math.max(...prof.map(p => p.ele))) + 5;
+  let minE = (globalMinE != null ? globalMinE : Math.min(...prof.map(p => p.ele))) - 5;
+  let maxE = (globalMaxE != null ? globalMaxE : Math.max(...prof.map(p => p.ele))) + 5;
+  // Enforce minimum Y-axis range so flat routes don't look artificially hilly
+  const MIN_ELE_RANGE = 500; // meters (~1640ft)
+  if (maxE - minE < MIN_ELE_RANGE) {
+    const mid = (minE + maxE) / 2;
+    minE = mid - MIN_ELE_RANGE / 2;
+    maxE = mid + MIN_ELE_RANGE / 2;
+  }
   const eleRange = maxE - minE || 1;
 
   const toX = d => pad.left + (d / maxDist) * plotW;
@@ -2144,8 +2158,15 @@ function drawThumbProfile(result, idx, globalMinE, globalMaxE) {
   if (prof.length < 2) return;
   const maxDist = prof[prof.length - 1].dist;
   const pad = 2;
-  const minE = (globalMinE != null ? globalMinE : Math.min(...prof.map(p => p.ele))) - 3;
-  const maxE = (globalMaxE != null ? globalMaxE : Math.max(...prof.map(p => p.ele))) + 3;
+  let minE = (globalMinE != null ? globalMinE : Math.min(...prof.map(p => p.ele))) - 3;
+  let maxE = (globalMaxE != null ? globalMaxE : Math.max(...prof.map(p => p.ele))) + 3;
+  // Enforce minimum Y-axis range (same as main profile)
+  const MIN_ELE_RANGE_THUMB = 500;
+  if (maxE - minE < MIN_ELE_RANGE_THUMB) {
+    const mid = (minE + maxE) / 2;
+    minE = mid - MIN_ELE_RANGE_THUMB / 2;
+    maxE = mid + MIN_ELE_RANGE_THUMB / 2;
+  }
   const eleRange = maxE - minE || 1;
 
   const toX = d => pad + (d / maxDist) * (w - pad * 2);
@@ -2633,6 +2654,8 @@ window.addEventListener('resize', () => {
   if (loadedRoutes.length > 0) {
     let gMin = Infinity, gMax = -Infinity;
     loadedRoutes.forEach(r => { if (r.minEle < gMin) gMin = r.minEle; if (r.maxEle > gMax) gMax = r.maxEle; });
+    // Enforce minimum range (same as renderResults)
+    if (gMax - gMin < 500) { const mid = (gMin + gMax) / 2; gMin = mid - 250; gMax = mid + 250; }
     loadedRoutes.forEach((r, i) => {
       drawProfile(r, i, gMin, gMax);
       drawThumbProfile(r, i, gMin, gMax);
