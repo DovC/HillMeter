@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VertHurt — Route Hilliness Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap" rel="stylesheet">
 <script src="/ingest/static/array.js" onerror="window.posthog={init:()=>{},capture:()=>{},identify:()=>{},reset:()=>{}}"></script>
 <script>
   try {
@@ -374,6 +375,336 @@
     color: #374151;
     margin: 8px 0;
     overflow-x: auto;
+  }
+
+  /* ── Explainer (scoped under .explainer-wrap) ── */
+  .explainer-wrap {
+    overflow: hidden;
+  }
+  .explainer-wrap .hero {
+    background: linear-gradient(180deg, #c9e8f7 0%, #ddf0e8 60%, #b8d9a0 100%);
+    padding: 32px 24px 0;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px 12px 0 0;
+  }
+  .explainer-wrap .hero-tag {
+    display: inline-block;
+    background: #3a86ff;
+    color: white;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+  }
+  .explainer-wrap .hero h1 {
+    font-family: 'Fredoka One', sans-serif;
+    font-size: clamp(32px, 6vw, 56px);
+    color: #2c3e2d;
+    line-height: 1.05;
+  }
+  .explainer-wrap .hero h1 em {
+    color: #e76f51;
+    font-style: normal;
+  }
+  .explainer-wrap .hero-sub {
+    max-width: 520px;
+    margin: 12px auto 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #6b7d5e;
+    line-height: 1.6;
+    font-family: 'Nunito', sans-serif;
+  }
+  .explainer-wrap .scene-wrap {
+    margin-top: 24px;
+    position: relative;
+    height: 140px;
+  }
+  .explainer-wrap .scene-wrap svg { width: 100%; height: 100%; }
+
+  .explainer-wrap details > summary {
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #374151;
+    cursor: pointer;
+    padding: 14px 24px;
+    background: #f0f7ff;
+    border-top: 1px solid #e0e7ef;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .explainer-wrap details > summary::-webkit-details-marker { display: none; }
+  .explainer-wrap details > summary::after {
+    content: '▼';
+    font-size: 0.7em;
+    transition: transform 0.2s;
+  }
+  .explainer-wrap details[open] > summary::after {
+    transform: rotate(180deg);
+  }
+
+  .explainer-wrap .explainer-body {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+    font-family: 'Nunito', sans-serif;
+    background: #e8f4fd;
+  }
+
+  .explainer-wrap .question-block {
+    background: #2c3e2d;
+    color: white;
+    border-radius: 20px;
+    padding: 28px 32px;
+    margin-top: 32px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .explainer-wrap .question-block::before {
+    content: '?';
+    position: absolute;
+    right: -20px; top: -30px;
+    font-family: 'Fredoka One', sans-serif;
+    font-size: 200px;
+    color: rgba(255,255,255,0.04);
+    line-height: 1;
+    pointer-events: none;
+  }
+  .explainer-wrap .question-block h2 {
+    font-family: 'Fredoka One', sans-serif;
+    font-size: 26px;
+    margin-bottom: 8px;
+  }
+  .explainer-wrap .question-block p {
+    font-size: 15px;
+    color: rgba(255,255,255,0.7);
+    font-weight: 600;
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .explainer-wrap .factors-label {
+    text-align: center;
+    margin-top: 40px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #6b7d5e;
+  }
+  .explainer-wrap .factors-title {
+    text-align: center;
+    font-family: 'Fredoka One', sans-serif;
+    font-size: 28px;
+    color: #2c3e2d;
+    margin-bottom: 24px;
+  }
+  .explainer-wrap .factors-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .explainer-wrap .factor-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 24px 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .explainer-wrap .factor-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+  }
+  .explainer-wrap .factor-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    font-size: 30px;
+  }
+  .explainer-wrap .factor-card:nth-child(1) .factor-icon { background: #e8f5e9; }
+  .explainer-wrap .factor-card:nth-child(2) .factor-icon { background: #fff3e0; }
+  .explainer-wrap .factor-card:nth-child(3) .factor-icon { background: #fce4ec; }
+  .explainer-wrap .factor-name {
+    font-family: 'Fredoka One', sans-serif;
+    font-size: 18px;
+    color: #2c3e2d;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .explainer-wrap .factor-desc {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7d5e;
+    line-height: 1.65;
+  }
+  .explainer-wrap .factor-illustration {
+    margin-top: 16px;
+    width: 100%;
+    height: 64px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f8f9f8;
+  }
+  .explainer-wrap .factor-illustration svg { width: 100%; height: 100%; }
+
+  .explainer-wrap .cleanup-block {
+    margin-top: 36px;
+    background: #f0f7ff;
+    border-radius: 20px;
+    padding: 28px 32px;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    box-shadow: 0 2px 12px rgba(58,134,255,0.08);
+  }
+  .explainer-wrap .cleanup-icon { font-size: 40px; flex-shrink: 0; line-height: 1; }
+  .explainer-wrap .cleanup-text h3 {
+    font-family: 'Fredoka One', sans-serif;
+    font-size: 20px;
+    color: #3a86ff;
+    margin-bottom: 6px;
+  }
+  .explainer-wrap .cleanup-text p {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a6080;
+    line-height: 1.7;
+  }
+  .explainer-wrap .cleanup-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .explainer-wrap .pill {
+    background: white;
+    border: 2px solid #c8ddf7;
+    color: #3a86ff;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  .explainer-wrap .spectrum-section { margin-top: 40px; }
+  .explainer-wrap .spectrum-section .factors-label { margin-top: 0; }
+  .explainer-wrap .spectrum-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .explainer-wrap .scard {
+    border-radius: 16px;
+    padding: 18px 14px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s;
+  }
+  .explainer-wrap .scard:hover { transform: scale(1.03); }
+  .explainer-wrap .scard::after {
+    content: '';
+    position: absolute;
+    bottom: -20px; right: -20px;
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    pointer-events: none;
+  }
+  .explainer-wrap .scard-range {
+    font-family: 'Fredoka One', sans-serif;
+    font-size: 24px;
+    line-height: 1;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .explainer-wrap .scard-name {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    display: block;
+    margin-bottom: 8px;
+    opacity: 0.9;
+  }
+  .explainer-wrap .scard-desc {
+    font-size: 11px;
+    font-weight: 600;
+    opacity: 0.8;
+    line-height: 1.5;
+  }
+  .explainer-wrap .scard-emoji { font-size: 24px; display: block; margin-bottom: 6px; }
+  .explainer-wrap .scard:nth-child(1) { background: linear-gradient(135deg, #52b788, #40916c); }
+  .explainer-wrap .scard:nth-child(2) { background: linear-gradient(135deg, #f4a261, #e76f51); }
+  .explainer-wrap .scard:nth-child(3) { background: linear-gradient(135deg, #e76f51, #c1121f); }
+  .explainer-wrap .scard:nth-child(4) { background: linear-gradient(135deg, #c1121f, #7b0000); }
+
+  .explainer-wrap .bottom-callout {
+    margin-top: 36px;
+    background: linear-gradient(135deg, #2c3e2d, #3d5c3a);
+    border-radius: 20px;
+    padding: 32px 36px;
+    text-align: center;
+    color: white;
+  }
+  .explainer-wrap .bottom-callout .big-num {
+    font-family: 'Fredoka One', sans-serif;
+    font-size: 56px;
+    line-height: 1;
+    color: #f7c948;
+  }
+  .explainer-wrap .bottom-callout p {
+    font-size: 15px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.75);
+    max-width: 420px;
+    margin: 10px auto 0;
+    line-height: 1.6;
+  }
+  .explainer-wrap .score-bar-outer {
+    max-width: 500px;
+    margin: 20px auto 0;
+    height: 18px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.15);
+    overflow: hidden;
+  }
+  .explainer-wrap .score-bar-inner {
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(to right, #52b788, #f4a261, #e76f51, #c1121f);
+    width: 100%;
+  }
+  .explainer-wrap .score-bar-labels {
+    max-width: 500px;
+    margin: 6px auto 0;
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 800;
+    color: rgba(255,255,255,0.5);
+  }
+
+  @media (max-width: 680px) {
+    .explainer-wrap .factors-grid { grid-template-columns: 1fr; }
+    .explainer-wrap .spectrum-cards { grid-template-columns: 1fr 1fr; }
+    .explainer-wrap .cleanup-block { flex-direction: column; }
+    .explainer-wrap .hero h1 { font-size: 32px; }
   }
 
   /* Color scale for scores */
@@ -1348,32 +1679,168 @@
     <div class="routes-grid" id="routesGrid"></div>
   </div>
 
-  <div class="methodology">
-    <details>
-      <summary>How the Hilliness Score Works</summary>
-      <div class="methodology-content">
-        <p>The hilliness score combines three dimensions of what makes a route feel hilly. Each component uses <strong>square root scaling</strong>, which expands differences between gentle and moderate routes while preserving meaningful separation at the top end — unlike logarithmic scaling, which compresses hard routes into an indistinguishable band near 100.</p>
+  <div class="methodology explainer-wrap">
+    <!-- Hero: always visible even when collapsed -->
+    <div class="hero">
+      <div class="hero-tag">Hilliness Score · Explained Simply</div>
+      <h1>How <em>Hilly</em><br>Was That Run?</h1>
+      <p class="hero-sub">One number — 0 to 100 — that captures how hard your route felt because of the hills.</p>
+      <div class="scene-wrap">
+        <svg viewBox="0 0 900 180" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="900" height="180" fill="none"/>
+          <circle cx="800" cy="40" r="30" fill="#f7c948" opacity="0.6"/>
+          <ellipse cx="150" cy="30" rx="60" ry="18" fill="white" opacity="0.7"/>
+          <ellipse cx="190" cy="25" rx="45" ry="15" fill="white" opacity="0.7"/>
+          <ellipse cx="120" cy="28" rx="35" ry="12" fill="white" opacity="0.7"/>
+          <ellipse cx="500" cy="45" rx="50" ry="15" fill="white" opacity="0.5"/>
+          <ellipse cx="540" cy="40" rx="35" ry="12" fill="white" opacity="0.5"/>
+          <polygon points="0,160 120,60 240,140 360,50 480,130 600,40 720,120 900,30 900,180 0,180" fill="#7aab5c" opacity="0.4"/>
+          <polygon points="0,180 80,110 180,160 300,80 420,150 520,70 640,140 760,60 900,120 900,180" fill="#5a8c3c"/>
+          <rect x="0" y="160" width="900" height="20" fill="#3d6128"/>
+          <path d="M 0 170 Q 150 155 280 165 Q 400 175 520 160 Q 640 148 780 162 Q 860 168 900 165" stroke="#c8a96e" stroke-width="5" fill="none" opacity="0.8"/>
+          <g transform="translate(440, 130)" opacity="0.9">
+            <circle cx="0" cy="-18" r="6" fill="#2c3e2d"/>
+            <line x1="0" y1="-12" x2="0" y2="2" stroke="#2c3e2d" stroke-width="3"/>
+            <line x1="0" y1="-4" x2="-8" y2="8" stroke="#2c3e2d" stroke-width="3"/>
+            <line x1="0" y1="-4" x2="8" y2="4" stroke="#2c3e2d" stroke-width="3"/>
+            <line x1="0" y1="2" x2="-6" y2="14" stroke="#2c3e2d" stroke-width="3"/>
+            <line x1="0" y1="2" x2="7" y2="13" stroke="#2c3e2d" stroke-width="3"/>
+          </g>
+          <g opacity="0.85">
+            <polygon points="60,130 72,100 84,130" fill="#3d6128"/>
+            <rect x="69" y="130" width="6" height="10" fill="#5a3e1a"/>
+            <polygon points="200,120 214,88 228,120" fill="#3d6128"/>
+            <rect x="211" y="120" width="6" height="10" fill="#5a3e1a"/>
+            <polygon points="700,110 715,76 730,110" fill="#3d6128"/>
+            <rect x="712" y="110" width="6" height="10" fill="#5a3e1a"/>
+            <polygon points="820,125 832,98 844,125" fill="#3d6128"/>
+            <rect x="829" y="125" width="6" height="10" fill="#5a3e1a"/>
+          </g>
+        </svg>
+      </div>
+    </div>
 
-        <h4>1. Climb Density (Volume) — 40% weight</h4>
-        <p>Total elevation gained divided by total distance. The most intuitive, universal metric — a marathon with 5,000ft of gain is objectively hillier than one with 1,200ft. Sqrt-scaled with a ceiling of ~264 ft/mi (50 m/km).</p>
-        <div class="formula">score = √(gain_per_km / 50) × 100</div>
+    <details id="explainerDetails">
+      <summary>Read more about how the score works</summary>
+      <div class="explainer-body">
 
-        <h4>2. Gradient-Weighted Intensity — 35% weight</h4>
-        <p>For each climbing segment, the gradient is raised to the power of 1.5 and multiplied by segment distance. The 1.5 exponent captures that steep grades are disproportionately hard without over-penalizing moderate grades. Sqrt-scaled with a ceiling of 8.</p>
-        <div class="formula">raw = Σ(distance_i × gradient_i^1.5) / total_distance &nbsp;→&nbsp; score = √(raw / 8) × 100</div>
+        <div class="question-block">
+          <h2>What makes a run feel hilly?</h2>
+          <p>It's not just one thing. The score looks at three different questions — and combines them into a single number.</p>
+        </div>
 
-        <h4>3. Climb Continuity — 25% weight</h4>
-        <p>Measures how sustained the climbs are. A route with one long 2km climb feels much hillier than one with twenty 100m bumps, even if total climbing distance is the same. Uses a power-sum formula where each climb's length is raised to p=1.3, naturally rewarding longer climbs disproportionately without arbitrary blending of statistics. Sqrt-scaled with a ceiling of 500.</p>
-        <div class="formula">metric = Σ(climb_length^1.3) / total_climb_distance &nbsp;→&nbsp; score = √(metric / 500) × 100</div>
+        <div class="factors-label">The three questions</div>
+        <div class="factors-title">What Goes Into the Score</div>
 
-        <h4>Why Square Root Scaling?</h4>
-        <p>Linear scaling compresses gentle-to-moderate routes into a narrow band at the bottom. Logarithmic scaling fixes the bottom but over-compresses the top — routes with 130 and 260 ft/mi gain both hit the ceiling. Square root scaling strikes the right balance: the jump from flat to rolling is still amplified, while genuinely harder routes maintain meaningful separation (210 ft/mi scores 89, not 100).</p>
+        <div class="factors-grid">
+          <div class="factor-card">
+            <div class="factor-icon">⛰️</div>
+            <span class="factor-name">How Much Did You Climb?</span>
+            <p class="factor-desc">Total feet climbed across the whole run. A marathon with 5,000 ft of gain is simply harder than one with 1,200 ft. More climbing = higher score.</p>
+            <div class="factor-illustration">
+              <svg viewBox="0 0 200 64" xmlns="http://www.w3.org/2000/svg">
+                <rect width="200" height="64" fill="#f0f7f0"/>
+                <polyline points="10,50 50,45 90,42 130,40 170,38 190,36" stroke="#52b788" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                <text x="10" y="62" font-size="8" fill="#52b788" font-family="Nunito" font-weight="800">gentle</text>
+                <polyline points="10,55 30,30 50,50 70,15 90,45 110,20 130,48 150,18 170,44 190,20" stroke="#e76f51" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                <text x="140" y="14" font-size="8" fill="#e76f51" font-family="Nunito" font-weight="800">lots of gain</text>
+              </svg>
+            </div>
+          </div>
 
-        <h4>Pre-processing</h4>
-        <p>GPS elevation data goes through three filtering passes. First, a <strong>median filter</strong> (window size 7) removes sharp elevation spikes caused by GPS drift during watch pauses. Second, a <strong>moving average</strong> (window size 5) smooths remaining noise. Third, a <strong>3-meter dead-band threshold</strong> eliminates GPS wobble — small oscillations under 3m (~10ft) that aren't real terrain changes but accumulate into significant phantom elevation gain. This approach mirrors Strava's elevation correction and produces gain figures consistent with corrected industry values. Sub-1.5ft segments are discarded as GPS jitter. Only uphill segments (>0.5% grade) contribute to the score.</p>
+          <div class="factor-card">
+            <div class="factor-icon">📐</div>
+            <span class="factor-name">How Steep Were the Hills?</span>
+            <p class="factor-desc">A really steep hill is way harder than a gentle slope — even if they gain the same height. Steep grades get penalized extra hard in the score.</p>
+            <div class="factor-illustration">
+              <svg viewBox="0 0 200 64" xmlns="http://www.w3.org/2000/svg">
+                <rect width="200" height="64" fill="#fff8f0"/>
+                <line x1="10" y1="54" x2="90" y2="20" stroke="#f4a261" stroke-width="2.5" stroke-linecap="round"/>
+                <text x="12" y="62" font-size="8" fill="#f4a261" font-family="Nunito" font-weight="800">gentle slope</text>
+                <line x1="120" y1="56" x2="145" y2="12" stroke="#e76f51" stroke-width="2.5" stroke-linecap="round"/>
+                <text x="148" y="20" font-size="8" fill="#e76f51" font-family="Nunito" font-weight="800">steep!</text>
+                <path d="M 30 54 Q 38 46 36 40" stroke="#f4a261" stroke-width="1.5" fill="none"/>
+                <text x="32" y="48" font-size="7" fill="#f4a261" font-family="Nunito">~20°</text>
+                <path d="M 130 56 Q 136 48 130 42" stroke="#e76f51" stroke-width="1.5" fill="none"/>
+                <text x="134" y="50" font-size="7" fill="#e76f51" font-family="Nunito">~60°</text>
+              </svg>
+            </div>
+          </div>
 
-        <h4>Score Ranges</h4>
-        <p>0–15 Flat &nbsp;·&nbsp; 15–30 Nearly Flat &nbsp;·&nbsp; 30–45 Gently Rolling &nbsp;·&nbsp; 45–60 Rolling &nbsp;·&nbsp; 60–70 Hilly &nbsp;·&nbsp; 70–82 Very Hilly &nbsp;·&nbsp; 82–100 Mountainous</p>
+          <div class="factor-card">
+            <div class="factor-icon">📏</div>
+            <span class="factor-name">Were the Climbs Long or Broken Up?</span>
+            <p class="factor-desc">One long 2-mile climb wears you out more than twenty tiny bumps — even with the same total climbing. Long, sustained climbs score higher.</p>
+            <div class="factor-illustration">
+              <svg viewBox="0 0 200 64" xmlns="http://www.w3.org/2000/svg">
+                <rect width="200" height="64" fill="#fdf0f3"/>
+                <polyline points="8,52 18,40 28,52 38,40 48,52 58,40 68,52 78,40 88,52" stroke="#52b788" stroke-width="2" fill="none" stroke-linecap="round"/>
+                <text x="8" y="62" font-size="7.5" fill="#52b788" font-family="Nunito" font-weight="800">many small bumps</text>
+                <polyline points="112,54 155,16 180,54" stroke="#c1121f" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                <text x="148" y="62" font-size="7.5" fill="#c1121f" font-family="Nunito" font-weight="800">one big climb</text>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="cleanup-block">
+          <div class="cleanup-icon">🛰️</div>
+          <div class="cleanup-text">
+            <h3>First, We Clean Up the GPS</h3>
+            <p>Your watch makes mistakes — tiny fake hills that aren't really there. Before scoring, the data gets cleaned up so you're only scored on real terrain, not GPS wobble. This matches the same approach Strava uses.</p>
+            <div class="cleanup-pills">
+              <span class="pill">Remove GPS spikes</span>
+              <span class="pill">Smooth the noise</span>
+              <span class="pill">Ignore tiny wiggles under 10 ft</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="spectrum-section">
+          <div class="factors-label">The scale</div>
+          <div class="factors-title">What Does Your Number Mean?</div>
+          <div class="spectrum-cards">
+            <div class="scard">
+              <span class="scard-emoji">🟢</span>
+              <span class="scard-range">0 – 30</span>
+              <span class="scard-name">Flat to Nearly Flat</span>
+              <p class="scard-desc">Barely any hills. You'll barely notice.</p>
+            </div>
+            <div class="scard">
+              <span class="scard-emoji">🟡</span>
+              <span class="scard-range">30 – 60</span>
+              <span class="scard-name">Rolling</span>
+              <p class="scard-desc">Some ups and downs. You'll notice, but it won't stop you.</p>
+            </div>
+            <div class="scard">
+              <span class="scard-emoji">🟠</span>
+              <span class="scard-range">60 – 82</span>
+              <span class="scard-name">Hilly to Very Hilly</span>
+              <p class="scard-desc">Real climbs. Your legs will feel it.</p>
+            </div>
+            <div class="scard">
+              <span class="scard-emoji">🔴</span>
+              <span class="scard-range">82 – 100</span>
+              <span class="scard-name">Mountainous</span>
+              <p class="scard-desc">Serious mountain terrain. Bring snacks.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-callout">
+          <div class="big-num">0 → 100</div>
+          <p>Flat routes look different from hilly ones. Brutal mountain routes look different from merely hard ones. One number tells the whole story.</p>
+          <div class="score-bar-outer">
+            <div class="score-bar-inner"></div>
+          </div>
+          <div class="score-bar-labels">
+            <span>Flat</span>
+            <span>Rolling</span>
+            <span>Hilly</span>
+            <span>Mountainous</span>
+          </div>
+        </div>
+
       </div>
     </details>
   </div>
@@ -1596,6 +2063,10 @@ async function checkAuth() {
         if (!currentUser.profile_complete) {
           showProfileModal(currentUser);
         }
+
+        // Collapse explainer for authenticated users
+        const explainerDetailsEl = document.getElementById('explainerDetails');
+        if (explainerDetailsEl) explainerDetailsEl.open = false;
 
         // Load sidebar routes for compare feature
         loadSidebarRoutes();
@@ -1880,6 +2351,11 @@ async function resumePendingAction() {
 // Init auth check on load
 posthog.capture('$pageview');
 loadSidebarRoutes();  // Show sidebar hint for anon users; checkAuth will refresh for auth'd
+
+// Default: expanded for unauthorized users
+const explainerEl = document.getElementById('explainerDetails');
+if (explainerEl) explainerEl.open = true;
+
 checkAuth();
 
 // Gate modal close button
