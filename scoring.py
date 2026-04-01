@@ -509,6 +509,19 @@ def compute_score(gpx_xml: str, name: str = None, mode: str = "running") -> Scor
     density_dampen = min(1.0, (density_score / 40) ** 0.5)
     continuity_score = continuity_score * density_dampen
 
+    # Noise confidence dampener — on flat routes, smoothing residuals produce
+    # phantom "climbing" segments (gradient > 0.5% on 25m = just 12.5cm rise).
+    # The dead-band filter is our best estimate of real gain. When scoring_gain
+    # vastly exceeds dead-band gain, most of the signal is noise.
+    # sqrt softens the effect so moderately noisy routes aren't over-penalized.
+    if scoring_gain > 0:
+        noise_dampener = min(1.0, math.sqrt(gain / scoring_gain))
+    else:
+        noise_dampener = 1.0
+    density_score *= noise_dampener
+    intensity_score *= noise_dampener
+    continuity_score *= noise_dampener
+
     # Composite
     composite = round(
         density_score * WEIGHT_DENSITY

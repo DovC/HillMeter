@@ -35,6 +35,18 @@ density_dampen = min(1.0, (density_score / 40)^0.5)
 continuity_score = continuity_score x density_dampen
 ```
 
+## Noise Confidence Dampener
+
+On extremely flat routes, GPS noise that survives smoothing produces many segments barely above the 0.5% gradient threshold (just 12.5cm rise per 25m segment). These phantom "climbs" inflate all three score components. The dead-band filter is our best estimate of real elevation gain — when segment-based scoring gain vastly exceeds dead-band gain, most of the signal is noise.
+
+A dampener is applied to all three component scores before computing the composite:
+
+```
+dampener = min(1.0, sqrt(dead_band_gain / scoring_gain))
+```
+
+This has no effect on genuinely hilly routes where dead-band gain and scoring gain converge (~1.0 ratio), but suppresses noise-inflated scores on flat routes (e.g., a route with 3m real gain but 27m phantom scoring gain gets dampener ≈ 0.33).
+
 ## Why Square Root Scaling?
 
 Linear scaling compresses gentle-to-moderate routes into a narrow band at the bottom. Logarithmic scaling fixes the bottom but over-compresses the top — routes with 130 and 260 ft/mi gain both hit the ceiling. Square root scaling strikes the right balance: the jump from flat to rolling is still amplified, while genuinely harder routes maintain meaningful separation (210 ft/mi scores 89, not 100).
