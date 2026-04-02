@@ -1849,6 +1849,13 @@
 </div>
 
 <script>
+// ============ HTML ESCAPING ============
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
 // ============ AUTH STATE ============
 let currentUser = null;
 const FREE_SCORE_LIMIT = 3;
@@ -2026,7 +2033,7 @@ async function _sendMagicLink(email, btn, statusEl) {
       btn.textContent = 'Sent!';
       posthog.capture('magic_link_sent', { email });
     } else {
-      statusEl.innerHTML = `<div style="color:#EF4444;font-size:0.875rem;padding:8px 0;">${data.error || 'Something went wrong.'}</div>`;
+      statusEl.innerHTML = `<div style="color:#EF4444;font-size:0.875rem;padding:8px 0;">${esc(data.error || 'Something went wrong.')}</div>`;
       btn.disabled = false;
       btn.textContent = 'Send login link';
     }
@@ -2412,14 +2419,14 @@ function renderResults(results) {
     card.innerHTML = `
       <div class="score-card-header">
         <div>
-          <div class="route-name">${r.name}</div>
-          <div class="route-meta">${(r.totalDist * 0.621371).toFixed(2)} mi${dateLine}</div>
+          <div class="route-name">${esc(r.name)}</div>
+          <div class="route-meta">${(r.totalDist * 0.621371).toFixed(2)} mi${esc(dateLine)}</div>
           <div class="thumb-profile"><canvas id="thumb-canvas-${idx}"></canvas></div>
         </div>
         <div style="text-align:right">
-          <div class="big-score ${r.scoreClass}">${r.composite}</div>
+          <div class="big-score ${esc(r.scoreClass)}">${r.composite}</div>
           <div class="score-label">VertHurt</div>
-          <div class="score-descriptor ${r.scoreClass}">${r.descriptor}</div>
+          <div class="score-descriptor ${esc(r.scoreClass)}">${esc(r.descriptor)}</div>
         </div>
       </div>
       <div class="component-scores">
@@ -2494,7 +2501,7 @@ function renderResults(results) {
     const profCard = document.createElement('div');
     profCard.className = 'profile-section';
     profCard.innerHTML = `
-      <div class="profile-title">${r.name} — Elevation Profile</div>
+      <div class="profile-title">${esc(r.name)} — Elevation Profile</div>
       <div class="profile-canvas-wrapper">
         <canvas id="profile-canvas-${idx}"></canvas>
       </div>
@@ -2771,7 +2778,7 @@ function updateUI() {
   loadedRoutes.forEach((r, i) => {
     const chip = document.createElement('div');
     chip.className = 'file-chip';
-    chip.innerHTML = `<span class="dot"></span>${r.name}<span class="remove" data-idx="${i}">&times;</span>`;
+    chip.innerHTML = `<span class="dot"></span>${esc(r.name)}<span class="remove" data-idx="${i}">&times;</span>`;
     chipsDiv.appendChild(chip);
   });
 
@@ -2945,8 +2952,8 @@ function renderSidebarItems() {
     item.innerHTML = `
       <div class="sidebar-score-badge" style="background:${badgeColor}">${route.composite}</div>
       <div class="sidebar-route-info">
-        <div class="sidebar-route-name">${route.name}</div>
-        <div class="sidebar-route-meta">${distMi} mi · ${route.descriptor}</div>
+        <div class="sidebar-route-name">${esc(route.name)}</div>
+        <div class="sidebar-route-meta">${distMi} mi · ${esc(route.descriptor)}</div>
       </div>
     `;
     item.addEventListener('click', () => toggleSidebarRoute(route.id));
@@ -3030,12 +3037,12 @@ async function loadMyRoutes() {
         </button>
         <div class="route-card-header">
           <div>
-            <div class="route-name">${route.name}</div>
-            <div class="route-meta">${distMi} mi${route.date ? ' · ' + route.date : ''}</div>
+            <div class="route-name">${esc(route.name)}</div>
+            <div class="route-meta">${distMi} mi${route.date ? ' · ' + esc(route.date) : ''}</div>
           </div>
           <div style="text-align:right">
-            <div class="mini-score ${route.scoreClass}">${route.composite}</div>
-            <div class="mini-descriptor ${route.scoreClass}">${route.descriptor}</div>
+            <div class="mini-score ${esc(route.scoreClass)}">${route.composite}</div>
+            <div class="mini-descriptor ${esc(route.scoreClass)}">${esc(route.descriptor)}</div>
           </div>
         </div>
         <div class="route-card-stats">

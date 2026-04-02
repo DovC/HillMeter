@@ -71,6 +71,10 @@ def get_current_user(request: Request) -> dict | None:
 
 async def send_magic_link(request: Request):
     """Send a magic link email for passwordless login."""
+    # Rate limit: 3 magic link requests per IP per 5 minutes
+    from server import _rate_limit
+    if _rate_limit(request, "magic_link", 3, 300):
+        return JSONResponse({"error": "Too many requests. Please wait a few minutes."}, status_code=429)
     try:
         data = await request.json()
         email = data.get("email", "").strip().lower()
@@ -206,13 +210,15 @@ def _email_to_doc_id(email: str) -> str:
 
 def _magic_link_error(message: str):
     """Return a user-friendly error page for magic link issues."""
+    import html as html_mod
+    safe_message = html_mod.escape(message)
     html = f"""
     <html>
     <head><title>VertHurt — Link Error</title></head>
     <body style="font-family: -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #F8F9FA;">
         <div style="text-align: center; max-width: 400px; padding: 40px;">
             <h2 style="color: #1F2937;">Oops!</h2>
-            <p style="color: #6B7280; margin-bottom: 24px;">{message}</p>
+            <p style="color: #6B7280; margin-bottom: 24px;">{safe_message}</p>
             <a href="/app.html" style="display: inline-block; background: #2563EB; color: white; padding: 10px 24px; border-radius: 8px; text-decoration: none;">Back to VertHurt</a>
         </div>
     </body>

@@ -14,8 +14,31 @@ from admin import (admin_stats, admin_list_users, admin_get_user, admin_update_u
 import httpx
 import os
 import re
+import hashlib
+import json
+import gzip
+import base64
+import time
+from collections import defaultdict
 
 app = FastAPI()
+
+# ============ RATE LIMITING ============
+# Simple in-memory rate limiter — keyed by IP, per-endpoint limits
+
+_rate_buckets: dict[str, list] = defaultdict(list)
+
+def _rate_limit(request: Request, key_prefix: str, max_requests: int, window_seconds: int) -> bool:
+    """Return True if rate limit exceeded."""
+    ip = request.client.host if request.client else "unknown"
+    bucket_key = f"{key_prefix}:{ip}"
+    now = time.time()
+    # Prune expired entries
+    _rate_buckets[bucket_key] = [t for t in _rate_buckets[bucket_key] if t > now - window_seconds]
+    if len(_rate_buckets[bucket_key]) >= max_requests:
+        return True
+    _rate_buckets[bucket_key].append(now)
+    return False
 
 # Prevent CDN/proxy caching of HTML files so deploys are immediately visible
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -39,6 +62,8 @@ posthog_assets_client = httpx.AsyncClient(base_url="https://us-assets.i.posthog.
 
 @app.post("/api/waitlist")
 async def join_waitlist(request: Request):
+    if _rate_limit(request, "waitlist", 5, 60):
+        return JSONResponse({"error": "Too many requests. Please try again later."}, status_code=429)
     try:
         data = await request.json()
         email = data.get("email", "").strip().lower()
@@ -154,18 +179,22 @@ def _save_anonymous_route(result, gpx_xml: str):
 
 
 @app.post("/api/score")
-async def score_route(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
+async def score_route(request: Request, background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     """
     Score a GPX file and return hilliness analysis.
 
     Accepts a GPX file upload, processes it server-side, and returns
     the full scoring result including profile data for rendering.
     """
+    if _rate_limit(request, "score", 20, 60):
+        return JSONResponse({"error": "Too many requests. Please try again later."}, status_code=429)
     try:
         if not file.filename.lower().endswith(".gpx"):
             return JSONResponse({"error": "File must be a .gpx file"}, status_code=400)
 
         content = await file.read()
+        if len(content) > 10 * 1024 * 1024:  # 10 MB limit
+            return JSONResponse({"error": "File too large. Maximum size is 10 MB."}, status_code=400)
         gpx_xml = content.decode("utf-8")
 
         # Use filename as route name
@@ -183,11 +212,6 @@ async def score_route(background_tasks: BackgroundTasks, file: UploadFile = File
 
 
 # ============ ROUTES API ============
-
-import hashlib
-import json
-import gzip
-import base64
 
 @app.post("/api/routes")
 async def save_route(request: Request):
@@ -379,13 +403,15 @@ async def posthog_proxy(path: str, request: Request):
         return Response(status_code=502)
 
 # Serve HTML files with no-cache headers, static assets normally
-from fastapi.responses import FileResponse
-import os
 
 @app.get("/admin.html")
 async def serve_admin(request: Request):
     user = get_current_user(request)
-    if not user or not user.get("is_admin"):
+    if not user:
+        return RedirectResponse(url="/app.html", status_code=302)
+    # Re-check Firestore for admin status (don't trust JWT alone)
+    user_doc = db.collection("users").document(user["user_id"]).get()
+    if not user_doc.exists or not user_doc.to_dict().get("is_admin", False):
         return RedirectResponse(url="/app.html", status_code=302)
     return FileResponse("static/admin.html", headers={
         "Cache-Control": "no-cache, no-store, must-revalidate",
