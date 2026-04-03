@@ -48,6 +48,10 @@ img, svg {
   max-width: 100%;
 }
 
+button, input, select, textarea {
+  font-family: inherit;
+}
+
 
 /* =============================================================================
    2. DESIGN TOKENS (CSS Custom Properties)
