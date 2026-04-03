@@ -18,7 +18,7 @@
     margin-bottom: var(--space-2);
   }
   .site-logo {
-    height: 48px;
+    height: 72px;
     width: auto;
   }
 
@@ -450,6 +450,7 @@
   .explainer-wrap .question-block h2 {
     font-size: 26px;
     font-weight: 800;
+    color: white;
     margin-bottom: var(--space-2);
   }
   .explainer-wrap .question-block p {
@@ -674,6 +675,68 @@
     .explainer-wrap .hero h1 { font-size: 32px; }
   }
 
+  /* ── Explainer dark mode overrides ── */
+  [data-theme="dark"] .explainer-wrap .hero {
+    background: linear-gradient(180deg, #1a3a2a 0%, #1e3320 60%, #243625 100%);
+  }
+  [data-theme="dark"] .explainer-wrap .hero h1 {
+    color: #E8EDE5;
+  }
+  [data-theme="dark"] .explainer-wrap .hero-sub {
+    color: #9AB494;
+  }
+  [data-theme="dark"] .explainer-wrap .explainer-body {
+    background: var(--color-page-bg);
+  }
+  [data-theme="dark"] .explainer-wrap .factor-card {
+    background: var(--color-card-bg);
+  }
+  [data-theme="dark"] .explainer-wrap .factor-card:nth-child(1) .factor-icon { background: #1a3a2a; }
+  [data-theme="dark"] .explainer-wrap .factor-card:nth-child(2) .factor-icon { background: #3a2a1a; }
+  [data-theme="dark"] .explainer-wrap .factor-card:nth-child(3) .factor-icon { background: #3a1a2a; }
+  [data-theme="dark"] .explainer-wrap .factors-title {
+    color: #E8EDE5;
+  }
+  [data-theme="dark"] .explainer-wrap .factor-name {
+    color: #E8EDE5;
+  }
+  [data-theme="dark"] .explainer-wrap .question-block {
+    background: #1C5C1E;
+  }
+  [data-theme="dark"] .explainer-wrap .question-block h2 {
+    color: white;
+  }
+  [data-theme="dark"] .explainer-wrap .question-block p {
+    color: rgba(255,255,255,0.7);
+  }
+  [data-theme="dark"] .explainer-wrap .factors-label {
+    color: #9AB494;
+  }
+  [data-theme="dark"] .explainer-wrap .factor-desc {
+    color: #9AB494;
+  }
+  [data-theme="dark"] .explainer-wrap .factor-illustration {
+    background: #1a3a2a;
+  }
+  [data-theme="dark"] .explainer-wrap .cleanup-block {
+    background: #1a2a3a;
+  }
+  [data-theme="dark"] .explainer-wrap .cleanup-text p {
+    color: #9AB494;
+  }
+  [data-theme="dark"] .explainer-wrap .pill {
+    background: var(--color-card-bg);
+    border-color: #3D5C3A;
+    color: var(--color-accent-blue);
+  }
+  [data-theme="dark"] .explainer-wrap details > summary {
+    color: #E8EDE5;
+    background: var(--color-card-bg);
+  }
+  [data-theme="dark"] .explainer-wrap .bottom-callout {
+    background: linear-gradient(135deg, #1C5C1E, #3d5c3a);
+  }
+
   /* Color scale for scores — brand hilliness spectrum */
   .score-flat { color: var(--color-flat); }
   .score-rolling { color: var(--color-rolling); }
@@ -697,7 +760,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--space-5);
+    margin-bottom: var(--space-2);
   }
   .nav-auth {
     display: flex;
@@ -737,6 +800,14 @@
     transition: background var(--transition-base);
   }
   .signin-btn:hover { background: #E5B83D; }
+  .dark-mode-toggle {
+    font-size: 18px;
+    padding: var(--space-1) var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    line-height: 1;
+  }
   /* Magic link email form */
   .magic-link-form {
     display: flex;
@@ -984,7 +1055,7 @@
   }
   .tab {
     padding: 10px 20px;
-    font-size: var(--text-body-sm);
+    font-size: var(--text-body);
     font-weight: 700;
     color: var(--color-green-500);
     cursor: pointer;
@@ -1070,8 +1141,8 @@
     -webkit-overflow-scrolling: touch;
   }
   .sidebar-header {
-    font-size: var(--text-caption);
-    font-weight: 700;
+    font-size: var(--text-h4);
+    font-weight: 800;
     color: var(--color-green-500);
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1211,7 +1282,7 @@
   /* GPX Help link */
   .gpx-help-link {
     margin-left: auto;
-    font-size: 0.8rem;
+    font-size: var(--text-body);
     color: var(--color-green-500);
     text-decoration: none;
     cursor: pointer;

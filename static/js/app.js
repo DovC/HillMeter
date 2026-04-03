@@ -112,9 +112,11 @@ function updateNavAuth() {
         <span class="user-name">${currentUser.name || currentUser.email || 'User'}</span>
       </div>
       <button class="logout-btn" onclick="handleLogout()">Log out</button>
+      <button class="btn-ghost dark-mode-toggle" id="darkModeToggle" onclick="toggleDarkMode()" title="Toggle dark mode">${document.documentElement.getAttribute('data-theme') === 'dark' ? '🌙' : '☀️'}</button>
     `;
   } else {
-    nav.innerHTML = `<button class="signin-btn" onclick="showSignInModal()">Sign in</button>`;
+    nav.innerHTML = `<button class="signin-btn" onclick="showSignInModal()">Sign in</button>
+      <button class="btn-ghost dark-mode-toggle" id="darkModeToggle" onclick="toggleDarkMode()" title="Toggle dark mode">${document.documentElement.getAttribute('data-theme') === 'dark' ? '🌙' : '☀️'}</button>`;
   }
 }
 
@@ -225,6 +227,10 @@ async function checkAuth() {
         // Collapse explainer for authenticated users
         const explainerDetailsEl = document.getElementById('explainerDetails');
         if (explainerDetailsEl) explainerDetailsEl.open = false;
+
+        // Compact dropzone for authenticated users
+        const dz = document.getElementById('dropzone');
+        if (dz) dz.classList.add('compact');
 
         // Load sidebar routes for compare feature
         loadSidebarRoutes();
