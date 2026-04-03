@@ -1,0 +1,529 @@
+/* =============================================================================
+   VertHurt — Shared UI Components
+   Version: 2.0
+
+   Usage: <link rel="stylesheet" href="/css/components.css">
+   Load AFTER verthurt.css, BEFORE page-specific stylesheets.
+
+   TABLE OF CONTENTS
+   1.  Buttons
+   2.  Cards
+   3.  Chips & Badges
+   4.  Forms & Inputs
+   5.  Dropzone (Upload)
+   6.  Modal
+   7.  Navigation
+   8.  Callout Boxes
+   9.  Page Footer
+   10. Legal Pages
+   11. Responsive Overrides
+============================================================================= */
+
+
+/* =============================================================================
+   1. BUTTONS
+============================================================================= */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 10px var(--space-5);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family);
+  font-size: var(--text-body);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast),
+              box-shadow var(--transition-fast),
+              transform var(--transition-fast),
+              border-color var(--transition-fast);
+  text-decoration: none;
+  line-height: 1.4;
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-forest);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  background: var(--color-disabled-bg);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Primary — Sun Gold (CTAs, highlights) */
+.btn-primary {
+  background: var(--color-sun-gold);
+  color: var(--color-forest-text);
+  box-shadow: var(--shadow-sm);
+}
+.btn-primary:hover {
+  background: #E5B83D;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Secondary — Forest Green */
+.btn-secondary {
+  background: var(--color-forest);
+  color: var(--color-white);
+  box-shadow: var(--shadow-sm);
+}
+.btn-secondary:hover {
+  background: #165018;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+
+/* Ghost — Transparent */
+.btn-ghost {
+  background: transparent;
+  color: var(--color-forest);
+  padding: 8px var(--space-4);
+}
+.btn-ghost:hover {
+  background: var(--color-page-bg);
+  text-decoration: none;
+}
+
+/* Danger — Mountainous Red */
+.btn-danger {
+  background: var(--color-danger);
+  color: var(--color-white);
+}
+.btn-danger:hover {
+  background: #A80F1A;
+  text-decoration: none;
+}
+
+/* Sizes */
+.btn-sm { padding: 6px var(--space-4); font-size: var(--text-body-sm); }
+.btn-lg { padding: 14px var(--space-6); font-size: var(--text-body-lg); }
+
+/* Icon-only close button */
+.btn-close {
+  background: var(--color-card-bg);
+  border: none;
+  border-radius: var(--radius-sm);
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: var(--color-green-500);
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.btn-close:hover {
+  background: var(--color-border);
+  color: var(--color-forest-text);
+}
+
+
+/* =============================================================================
+   2. CARDS
+============================================================================= */
+
+.card {
+  background: var(--color-card-bg);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border-light);
+  transition: box-shadow var(--transition-base), transform var(--transition-base);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-4px);
+}
+
+.card-sm {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+}
+
+.card-static {
+  transition: none;
+}
+.card-static:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm);
+}
+
+
+/* =============================================================================
+   3. CHIPS & BADGES
+============================================================================= */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--color-card-bg);
+  color: var(--color-forest-text);
+  font-size: var(--text-label);
+  font-weight: 600;
+  padding: 3px var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.chip-strava {
+  background: var(--color-strava-light);
+  color: var(--color-strava-dark);
+  border-color: var(--color-strava-border);
+}
+
+.chip-strava .chip-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--color-strava);
+  flex-shrink: 0;
+}
+
+.chip-accent {
+  background: #EBF3FF;
+  color: var(--color-accent-blue);
+  border-color: #B8D4FF;
+}
+
+.chip-success {
+  background: #ECFDF5;
+  color: #15803D;
+  border-color: #A7F3D0;
+  font-weight: 700;
+}
+
+/* Hilliness score badges */
+.badge-flat        { background: var(--color-flat);        color: white; }
+.badge-rolling     { background: var(--color-rolling);     color: white; }
+.badge-hilly       { background: var(--color-hilly);       color: white; }
+.badge-mountainous { background: var(--color-mountainous); color: white; }
+
+
+/* =============================================================================
+   4. FORMS & INPUTS
+============================================================================= */
+
+.form-group { margin-bottom: var(--space-4); }
+
+.label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+  color: var(--color-forest-text);
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  padding: 10px var(--space-4);
+  font-family: var(--font-family);
+  font-size: var(--text-body);
+  background: var(--color-white);
+  color: var(--color-forest-text);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--color-forest);
+  box-shadow: 0 0 0 3px rgba(28, 92, 30, 0.12);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--color-green-500);
+}
+
+.textarea { resize: vertical; min-height: 96px; line-height: 1.55; }
+
+
+/* =============================================================================
+   5. DROPZONE (Upload)
+============================================================================= */
+
+.dropzone {
+  border: 2px dashed var(--color-border-medium);
+  border-radius: var(--radius-md);
+  padding: var(--space-7) var(--space-5);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  background: var(--color-white);
+}
+
+.dropzone:hover,
+.dropzone.dragover {
+  border-color: var(--color-forest);
+  background: #F0F7F0;
+}
+
+.dropzone-icon {
+  font-size: 2rem;
+  margin-bottom: var(--space-2);
+  color: var(--color-green-500);
+}
+
+.dropzone-text {
+  font-size: var(--text-body);
+  color: var(--color-green-500);
+}
+
+.dropzone-text strong {
+  color: var(--color-forest);
+}
+
+.dropzone-subtitle {
+  font-size: var(--text-body-sm);
+  color: var(--color-green-500);
+  margin-top: var(--space-1);
+}
+
+
+/* =============================================================================
+   6. MODAL
+============================================================================= */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  z-index: 200;
+}
+
+.modal {
+  background: var(--color-white);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 460px;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+}
+
+.modal-sm { max-width: 380px; }
+.modal-lg { max-width: 640px; }
+
+.modal-header {
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  border-bottom: 1px solid var(--color-border-light);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.modal-header h2 {
+  font-size: var(--text-h4);
+  font-weight: 700;
+  color: var(--color-forest-text);
+}
+
+.modal-body {
+  overflow-y: auto;
+  padding: var(--space-5);
+  flex: 1;
+}
+
+.modal-footer {
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--color-border-light);
+  background: var(--color-card-bg);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+
+/* =============================================================================
+   7. NAVIGATION
+============================================================================= */
+
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) 0;
+  margin-bottom: var(--space-2);
+}
+
+.nav-brand {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-forest-text);
+  text-decoration: none;
+}
+.nav-brand:hover { text-decoration: none; }
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0; padding: 0;
+}
+
+.nav-link {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-body-sm);
+  font-weight: 600;
+  color: var(--color-green-500);
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast), color var(--transition-fast);
+  text-decoration: none;
+}
+.nav-link:hover {
+  background: var(--color-card-bg);
+  color: var(--color-forest-text);
+  text-decoration: none;
+}
+.nav-link.active {
+  color: var(--color-forest-text);
+  background: var(--color-card-bg);
+}
+
+
+/* =============================================================================
+   8. CALLOUT BOXES
+============================================================================= */
+
+.callout {
+  padding: var(--space-4) var(--space-5);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin: var(--space-4) 0;
+}
+
+.callout p { margin-bottom: 0; font-size: var(--text-body-sm); }
+
+.callout-warning {
+  background: #FFF8E1;
+  border-left: 4px solid var(--color-rolling);
+}
+
+.callout-success {
+  background: #ECFDF5;
+  border-left: 4px solid var(--color-flat);
+}
+
+.callout-info {
+  background: #EBF3FF;
+  border-left: 4px solid var(--color-accent-blue);
+}
+
+
+/* =============================================================================
+   9. PAGE FOOTER
+============================================================================= */
+
+.site-footer {
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  margin-top: var(--space-7);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-green-500);
+  font-size: var(--text-label);
+}
+
+.site-footer a {
+  color: var(--color-green-500);
+  text-decoration: none;
+  margin: 0 var(--space-3);
+}
+
+.site-footer a:hover {
+  color: var(--color-forest-text);
+  text-decoration: underline;
+}
+
+
+/* =============================================================================
+   10. LEGAL PAGES (terms.html, privacy.html)
+============================================================================= */
+
+.legal-page .container { max-width: 720px; }
+
+.legal-page h1 {
+  font-size: var(--text-h1);
+  text-align: center;
+  margin-bottom: var(--space-1);
+}
+
+.legal-page .effective-date {
+  text-align: center;
+  color: var(--color-green-500);
+  font-size: var(--text-body);
+  margin-bottom: var(--space-7);
+}
+
+.legal-page h2 {
+  font-size: var(--text-h3);
+  font-weight: 700;
+  margin-top: var(--space-6);
+  margin-bottom: var(--space-3);
+}
+
+.legal-page h3 {
+  font-size: var(--text-body);
+  font-weight: 700;
+  margin-top: var(--space-5);
+  margin-bottom: var(--space-2);
+  color: var(--color-forest-text);
+}
+
+.legal-page p { line-height: 1.7; }
+
+
+/* =============================================================================
+   11. RESPONSIVE OVERRIDES
+============================================================================= */
+
+@media (max-width: 768px) {
+  .modal { border-radius: var(--radius-lg); }
+  .modal-overlay { padding: var(--space-3); }
+}
+
+@media (max-width: 480px) {
+  .btn { padding: 9px var(--space-4); }
+
+  .modal {
+    max-height: 95vh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  .modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .nav-links { display: none; }
+}
