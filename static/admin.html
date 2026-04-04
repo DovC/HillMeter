@@ -16,6 +16,7 @@
   <div class="admin-header-right">
     <a href="/app.html">&larr; Back to App</a>
     <span id="adminUserName" style="font-size:0.85rem;color:#6B7280;"></span>
+    <button class="btn-ghost dark-mode-toggle" id="darkModeToggle" onclick="toggleDarkMode()" title="Toggle theme: Dark / Light / System">🖥️</button>
   </div>
 </div>
 
@@ -137,6 +138,34 @@
   </div>
 </div>
 
+<script>
+var _themeMQ = window.matchMedia('(prefers-color-scheme: dark)');
+function _getSystemTheme() { return _themeMQ.matches ? 'dark' : 'light'; }
+function applyTheme() {
+  var pref = localStorage.getItem('verthurt-theme');
+  var theme = (pref === 'dark' || pref === 'light') ? pref : _getSystemTheme();
+  document.documentElement.setAttribute('data-theme', theme);
+  _updateToggleIcon(pref);
+}
+function _updateToggleIcon(pref) {
+  var btn = document.getElementById('darkModeToggle');
+  if (!btn) return;
+  if (pref === 'dark') btn.textContent = '🌙';
+  else if (pref === 'light') btn.textContent = '☀️';
+  else btn.textContent = '🖥️';
+}
+function toggleDarkMode() {
+  var pref = localStorage.getItem('verthurt-theme');
+  if (!pref) { pref = 'dark'; }
+  else if (pref === 'dark') { pref = 'light'; }
+  else { pref = null; }
+  if (pref) localStorage.setItem('verthurt-theme', pref);
+  else localStorage.removeItem('verthurt-theme');
+  applyTheme();
+}
+applyTheme();
+_themeMQ.addEventListener('change', applyTheme);
+</script>
 <script src="/js/admin.js"></script>
 </body>
 </html>

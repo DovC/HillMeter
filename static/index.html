@@ -108,6 +108,15 @@
 
 </div>
 
+<script>
+(function() {
+  var theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', theme);
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+    document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+  });
+})();
+</script>
 <script src="/js/index.js"></script>
 </body>
 </html>

@@ -33,7 +33,6 @@
     </div>
     <div class="nav-auth" id="navAuth">
       <button class="signin-btn" onclick="showSignInModal()">Sign in</button>
-      <button class="btn-ghost dark-mode-toggle" id="darkModeToggle" onclick="toggleDarkMode()" title="Toggle dark mode">☀️</button>
     </div>
   </div>
   <p class="subtitle">Drop a GPX file to score how hilly your route really is.</p>
@@ -442,22 +441,33 @@
 </div>
 
 <script>
-function toggleDarkMode() {
-  const html = document.documentElement;
-  const isDark = html.getAttribute('data-theme') === 'dark';
-  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
-  document.getElementById('darkModeToggle').textContent = isDark ? '☀️' : '🌙';
-  localStorage.setItem('verthurt-theme', isDark ? 'light' : 'dark');
+var _themeMQ = window.matchMedia('(prefers-color-scheme: dark)');
+function _getSystemTheme() { return _themeMQ.matches ? 'dark' : 'light'; }
+function applyTheme() {
+  var pref = localStorage.getItem('verthurt-theme'); // 'dark', 'light', or null (system)
+  var theme = (pref === 'dark' || pref === 'light') ? pref : _getSystemTheme();
+  document.documentElement.setAttribute('data-theme', theme);
+  _updateToggleIcon(pref);
 }
-(function() {
-  const saved = localStorage.getItem('verthurt-theme');
-  if (saved === 'dark') {
-    document.documentElement.setAttribute('data-theme', 'dark');
-    document.addEventListener('DOMContentLoaded', function() {
-      document.getElementById('darkModeToggle').textContent = '🌙';
-    });
-  }
-})();
+function _updateToggleIcon(pref) {
+  var btn = document.getElementById('darkModeToggle');
+  if (!btn) return;
+  if (pref === 'dark') btn.textContent = '🌙';
+  else if (pref === 'light') btn.textContent = '☀️';
+  else btn.textContent = '🖥️';
+}
+function toggleDarkMode() {
+  var pref = localStorage.getItem('verthurt-theme');
+  // Cycle: system → dark → light → system
+  if (!pref) { pref = 'dark'; }
+  else if (pref === 'dark') { pref = 'light'; }
+  else { pref = null; }
+  if (pref) localStorage.setItem('verthurt-theme', pref);
+  else localStorage.removeItem('verthurt-theme');
+  applyTheme();
+}
+applyTheme();
+_themeMQ.addEventListener('change', applyTheme);
 </script>
 <script src="/js/app.js"></script>
 

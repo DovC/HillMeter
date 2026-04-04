@@ -112,11 +112,18 @@ function updateNavAuth() {
         <span class="user-name">${currentUser.name || currentUser.email || 'User'}</span>
       </div>
       <button class="logout-btn" onclick="handleLogout()">Log out</button>
-      <button class="btn-ghost dark-mode-toggle" id="darkModeToggle" onclick="toggleDarkMode()" title="Toggle dark mode">${document.documentElement.getAttribute('data-theme') === 'dark' ? '🌙' : '☀️'}</button>
+      ${currentUser.is_admin ? '<button class="btn-ghost dark-mode-toggle" id="darkModeToggle" onclick="toggleDarkMode()" title="Toggle theme: Dark / Light / System">🖥️</button>' : ''}
     `;
+    if (currentUser.is_admin) {
+      applyTheme();
+    } else {
+      localStorage.removeItem('verthurt-theme');
+      applyTheme();
+    }
   } else {
-    nav.innerHTML = `<button class="signin-btn" onclick="showSignInModal()">Sign in</button>
-      <button class="btn-ghost dark-mode-toggle" id="darkModeToggle" onclick="toggleDarkMode()" title="Toggle dark mode">${document.documentElement.getAttribute('data-theme') === 'dark' ? '🌙' : '☀️'}</button>`;
+    nav.innerHTML = `<button class="signin-btn" onclick="showSignInModal()">Sign in</button>`;
+    localStorage.removeItem('verthurt-theme');
+    applyTheme();
   }
 }
 
