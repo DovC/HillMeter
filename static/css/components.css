@@ -317,7 +317,8 @@
 }
 
 .modal {
-  background: var(--color-white);
+  background: #FFFFFF;
+  color: #1B4332;
   border-radius: var(--radius-xl);
   width: 100%;
   max-width: 460px;
@@ -344,7 +345,7 @@
 .modal-header h2 {
   font-size: var(--text-h4);
   font-weight: 700;
-  color: var(--color-forest-text);
+  color: #1B4332;
 }
 
 .modal-body {
@@ -354,14 +355,23 @@
 }
 
 .modal-footer {
-  padding: var(--space-3) var(--space-5);
-  border-top: 1px solid var(--color-border-light);
-  background: var(--color-card-bg);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid #E0E0E0;
+  background: #F3F4F1;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+}
+
+.modal .input {
+  background: #FFFFFF;
+  color: #1B4332;
+  border-color: #C8D0C4;
+}
+.modal .input:focus {
+  border-color: var(--color-forest);
 }
 
 

@@ -4,7 +4,7 @@
     {
       "name": "hillmeter-local",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd /Users/dov/Projects/HillMeter && python3 -m uvicorn server:app --host 0.0.0.0 --port 8080"],
+      "runtimeArgs": ["-c", "cd /Users/dov/Projects/HillMeter && /usr/local/bin/python3 -m uvicorn server:app --host 0.0.0.0 --port 8080"],
       "port": 8080
     }
   ]

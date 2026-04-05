@@ -1117,6 +1117,9 @@ function renderSidebarItems() {
         <div class="sidebar-route-name">${esc(route.name)}</div>
         <div class="sidebar-route-meta">${distMi} mi · ${esc(route.descriptor)}</div>
       </div>
+      <button class="edit-name-btn" title="Rename route" onclick="event.stopPropagation(); openEditRouteName('${route.id}', '${route.link_id}', '${esc(route.name).replace(/'/g, "\\'")}')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+      </button>
     `;
     item.addEventListener('click', () => toggleSidebarRoute(route.id));
     list.appendChild(item);
@@ -1197,6 +1200,9 @@ async function loadMyRoutes() {
         <button class="delete-btn" onclick="event.stopPropagation(); deleteRoute('${route.id}', '${route.link_id}')" title="Remove from library">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
         </button>
+        <button class="edit-name-btn card-edit-btn" onclick="event.stopPropagation(); openEditRouteName('${route.id}', '${route.link_id}', '${esc(route.name).replace(/'/g, "\\'")}')" title="Rename route">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+        </button>
         <div class="route-card-header">
           <div>
             <div class="route-name">${esc(route.name)}</div>
@@ -1243,6 +1249,68 @@ async function viewSavedRoute(routeId) {
     console.error('View route error:', err);
   }
 }
+
+// ============ EDIT ROUTE NAME ============
+let editingRouteId = null;
+let editingLinkId = null;
+
+function openEditRouteName(routeId, linkId, currentName) {
+  editingRouteId = routeId;
+  editingLinkId = linkId;
+  const input = document.getElementById('editRouteNameInput');
+  input.value = currentName;
+  document.getElementById('editRouteNameModal').classList.add('visible');
+  input.focus();
+  input.select();
+}
+
+function closeEditRouteName() {
+  document.getElementById('editRouteNameModal').classList.remove('visible');
+  editingRouteId = null;
+  editingLinkId = null;
+}
+
+async function saveRouteName() {
+  const input = document.getElementById('editRouteNameInput');
+  const newName = input.value.trim();
+  if (!newName) return;
+
+  const btn = document.getElementById('saveRouteNameBtn');
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch(`/api/routes/${editingRouteId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ display_name: newName }),
+    });
+
+    if (resp.ok) {
+      closeEditRouteName();
+      loadSidebarRoutes();
+      if (document.getElementById('myRoutesTab')?.classList.contains('visible')) {
+        loadMyRoutes();
+      }
+    }
+  } catch (err) {
+    console.error('Rename error:', err);
+  } finally {
+    btn.textContent = 'Save';
+    btn.disabled = false;
+  }
+}
+
+// Close on overlay click
+document.getElementById('editRouteNameModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeEditRouteName();
+});
+
+// Save on Enter key
+document.getElementById('editRouteNameInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') saveRouteName();
+  if (e.key === 'Escape') closeEditRouteName();
+});
 
 async function deleteRoute(routeId, linkId) {
   if (!confirm('Remove this route from your library?')) return;

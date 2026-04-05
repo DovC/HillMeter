@@ -346,6 +346,36 @@ async def get_route(route_id: str, request: Request):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
+@app.patch("/api/routes/{route_id}")
+async def update_route(route_id: str, request: Request):
+    """Update a saved route's display name."""
+    user = get_current_user(request)
+    if not user:
+        return JSONResponse({"error": "Authentication required"}, status_code=401)
+
+    try:
+        data = await request.json()
+        display_name = data.get("display_name", "").strip()
+
+        if not display_name or len(display_name) > 100:
+            return JSONResponse({"error": "Name must be 1-100 characters"}, status_code=400)
+
+        links = db.collection("user_routes") \
+            .where("user_id", "==", user["user_id"]) \
+            .where("route_id", "==", route_id) \
+            .limit(1).get()
+
+        link_list = list(links)
+        if not link_list:
+            return JSONResponse({"error": "Route not found in your library"}, status_code=404)
+
+        link_list[0].reference.update({"display_name": display_name})
+        return JSONResponse({"status": "updated"})
+
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
 @app.delete("/api/routes/{route_id}")
 async def delete_route(route_id: str, request: Request):
     """Remove a route from user's library (doesn't delete the route data)."""
