@@ -6,11 +6,8 @@ import gzip
 import base64
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
-from google.cloud import firestore
-
+from db import db
 from auth import get_current_user
-
-db = firestore.Client(project="hilliness-analyzer")
 
 # Bootstrap: To create the first admin, set is_admin=True in Firestore console:
 # db.collection("users").document("<user_doc_id>").update({"is_admin": True})
@@ -230,23 +227,22 @@ async def admin_delete_user(request: Request):
 
 # ============ ROUTE MANAGEMENT ============
 
-async def admin_list_routes(request: Request):
-    """List all routes with search, sort, pagination."""
+async def _list_collection(request: Request, collection_name: str, default_sort: str):
+    """Generic paginated, searchable, sortable listing for route-like collections."""
     admin = await _require_admin(request)
     if not admin:
         return JSONResponse({"error": "Forbidden"}, status_code=403)
 
     q = request.query_params.get("q", "").lower()
-    sort_field = request.query_params.get("sort", "created_at")
+    sort_field = request.query_params.get("sort", default_sort)
     order = request.query_params.get("order", "desc")
     page = int(request.query_params.get("page", 1))
     per_page = int(request.query_params.get("per_page", 25))
 
     routes = []
-    for doc in db.collection("routes").stream():
+    for doc in db.collection(collection_name).stream():
         data = _sanitize(doc.to_dict())
         data["doc_id"] = doc.id
-        # Strip large fields
         data.pop("gpx_compressed", None)
         data.pop("gpx_raw", None)
         data.pop("profile", None)
@@ -269,46 +265,16 @@ async def admin_list_routes(request: Request):
         "per_page": per_page,
         "total_pages": max(1, (total + per_page - 1) // per_page),
     })
+
+
+async def admin_list_routes(request: Request):
+    """List all routes with search, sort, pagination."""
+    return await _list_collection(request, "routes", "created_at")
 
 
 async def admin_list_scored_routes(request: Request):
     """List all anonymously scored routes."""
-    admin = await _require_admin(request)
-    if not admin:
-        return JSONResponse({"error": "Forbidden"}, status_code=403)
-
-    q = request.query_params.get("q", "").lower()
-    sort_field = request.query_params.get("sort", "scored_at")
-    order = request.query_params.get("order", "desc")
-    page = int(request.query_params.get("page", 1))
-    per_page = int(request.query_params.get("per_page", 25))
-
-    routes = []
-    for doc in db.collection("scored_routes").stream():
-        data = _sanitize(doc.to_dict())
-        data["doc_id"] = doc.id
-        data.pop("gpx_compressed", None)
-        data.pop("gpx_raw", None)
-        data.pop("profile", None)
-        routes.append(data)
-
-    if q:
-        routes = [r for r in routes if q in r.get("name", "").lower()]
-
-    reverse = order == "desc"
-    routes.sort(key=lambda r: _sort_key(r, sort_field), reverse=reverse)
-
-    total = len(routes)
-    start = (page - 1) * per_page
-    routes = routes[start:start + per_page]
-
-    return JSONResponse({
-        "routes": routes,
-        "total": total,
-        "page": page,
-        "per_page": per_page,
-        "total_pages": max(1, (total + per_page - 1) // per_page),
-    })
+    return await _list_collection(request, "scored_routes", "scored_at")
 
 
 # ============ GPX DOWNLOAD ============

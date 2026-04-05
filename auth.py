@@ -8,7 +8,7 @@ import httpx
 from jose import jwt
 from fastapi import Request, Response
 from fastapi.responses import RedirectResponse, JSONResponse
-from google.cloud import firestore
+from db import db
 
 # Config from environment
 STRAVA_CLIENT_ID = os.getenv("STRAVA_CLIENT_ID", "")
@@ -27,8 +27,6 @@ BASE_URL = os.getenv("BASE_URL", "http://localhost:8080")
 
 STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
 STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
-
-db = firestore.Client(project="hilliness-analyzer")
 
 
 def _make_jwt(user_data: dict) -> str:
@@ -55,8 +53,6 @@ def get_current_user(request: Request) -> dict | None:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return {
             "user_id": payload["sub"],
-            # Backward compat: strava_id for code that still references it
-            "strava_id": payload["sub"],
             "name": payload.get("name", ""),
             "avatar": payload.get("avatar", ""),
             "profile_complete": payload.get("profile_complete", False),
@@ -277,7 +273,6 @@ async def strava_callback(request: Request):
 
     user_data = {
         "user_id": strava_id,
-        "strava_id": strava_id,
         "name": f"{athlete.get('firstname', '')} {athlete.get('lastname', '')}".strip(),
         "avatar": athlete.get("profile_medium", ""),
         "city": athlete.get("city", ""),

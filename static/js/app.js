@@ -219,12 +219,12 @@ async function checkAuth() {
           posthog.identify(currentUser.email, {
             $email: currentUser.email,
             $name: (currentUser.first_name || '') + ' ' + (currentUser.last_name || ''),
-            strava_id: currentUser.strava_id,
+            user_id: currentUser.user_id,
             first_name: currentUser.first_name,
             last_name: currentUser.last_name,
           });
         }
-        posthog.capture('auth_session_restored', { strava_id: currentUser.strava_id });
+        posthog.capture('auth_session_restored', { user_id: currentUser.user_id });
 
         // Show profile completion modal on first login
         if (!currentUser.profile_complete) {
@@ -293,7 +293,7 @@ document.getElementById('profileForm').addEventListener('submit', async (e) => {
         posthog.identify(currentUser.email, {
           $email: currentUser.email,
           $name: (currentUser.first_name || '') + ' ' + (currentUser.last_name || ''),
-          strava_id: currentUser.strava_id,
+          user_id: currentUser.user_id,
           first_name: currentUser.first_name,
           last_name: currentUser.last_name,
         });
@@ -354,7 +354,7 @@ document.getElementById('editProfileForm').addEventListener('submit', async (e) 
         posthog.identify(currentUser.email, {
           $email: currentUser.email,
           $name: (currentUser.first_name || '') + ' ' + (currentUser.last_name || ''),
-          strava_id: currentUser.strava_id,
+          user_id: currentUser.user_id,
           first_name: currentUser.first_name,
           last_name: currentUser.last_name,
         });

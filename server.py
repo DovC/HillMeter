@@ -5,8 +5,8 @@ from fastapi import FastAPI, Request, UploadFile, File, Form, BackgroundTasks
 import xml.etree.ElementTree as ET
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, Response, RedirectResponse
-from google.cloud import firestore
-from datetime import datetime
+from datetime import datetime, timezone
+from db import db
 from scoring import compute_score
 from auth import strava_login, strava_callback, get_me, logout, update_profile, delete_account, get_current_user, send_magic_link, verify_magic_link
 from admin import (admin_stats, admin_list_users, admin_get_user, admin_update_user,
@@ -53,9 +53,6 @@ class NoCacheHTMLMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(NoCacheHTMLMiddleware)
 
-# Firestore client (auto-authenticates on Cloud Run via service account)
-db = firestore.Client(project="hilliness-analyzer")
-
 # PostHog proxy client
 posthog_client = httpx.AsyncClient(base_url="https://us.i.posthog.com", timeout=10.0)
 posthog_assets_client = httpx.AsyncClient(base_url="https://us-assets.i.posthog.com", timeout=10.0)
@@ -79,7 +76,7 @@ async def join_waitlist(request: Request):
         # Save to Firestore
         db.collection("waitlist").add({
             "email": email,
-            "signed_up_at": datetime.utcnow().isoformat(),
+            "signed_up_at": datetime.now(timezone.utc).isoformat(),
             "source": data.get("source", "landing_page"),
             "user_agent": request.headers.get("user-agent", ""),
         })
@@ -156,7 +153,7 @@ def _save_anonymous_route(result, gpx_xml: str):
             "gpx_compressed": gpx_compressed,
             "name": result.name,
             "date": result.date,
-            "scored_at": datetime.utcnow().isoformat(),
+            "scored_at": datetime.now(timezone.utc).isoformat(),
             "composite": result.composite,
             "descriptor": result.descriptor,
             "score_class": result.score_class,
@@ -263,14 +260,14 @@ async def save_route(request: Request):
                 "bands": score_data.get("bands", {}),
                 "bandColors": score_data.get("bandColors", {}),
                 "profile": score_data.get("profile", []),
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             }
             _, route_ref = db.collection("routes").add(route_doc)
             route_id = route_ref.id
 
         # Check if user already has this route saved
         existing_link = db.collection("user_routes") \
-            .where("user_id", "==", user["strava_id"]) \
+            .where("user_id", "==", user["user_id"]) \
             .where("route_id", "==", route_id) \
             .limit(1).get()
 
@@ -279,10 +276,10 @@ async def save_route(request: Request):
 
         # Create user-route link
         db.collection("user_routes").add({
-            "user_id": user["strava_id"],
+            "user_id": user["user_id"],
             "route_id": route_id,
             "display_name": score_data.get("name", "Unnamed Route"),
-            "saved_at": datetime.utcnow().isoformat(),
+            "saved_at": datetime.now(timezone.utc).isoformat(),
         })
 
         return JSONResponse({"status": "saved", "route_id": route_id})
@@ -303,7 +300,7 @@ async def list_routes(request: Request):
     try:
         # Get user's route links (sort in Python to avoid requiring Firestore composite index)
         links = db.collection("user_routes") \
-            .where("user_id", "==", user["strava_id"]) \
+            .where("user_id", "==", user["user_id"]) \
             .get()
 
         routes = []
@@ -362,7 +359,7 @@ async def delete_route(route_id: str, request: Request):
 
     try:
         links = db.collection("user_routes") \
-            .where("user_id", "==", user["strava_id"]) \
+            .where("user_id", "==", user["user_id"]) \
             .where("route_id", "==", route_id) \
             .get()
 
