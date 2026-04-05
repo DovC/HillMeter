@@ -4,6 +4,7 @@ import time
 from datetime import datetime, timezone, timedelta
 import gzip
 import base64
+import binascii
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
 from db import db
@@ -61,14 +62,13 @@ async def admin_stats(request: Request):
     seven_days_ago = now - 7 * 86400
     thirty_days_ago = now - 30 * 86400
 
-    users = [doc.to_dict() for doc in db.collection("users").stream()]
-    total_users = len(users)
-    new_7d = sum(1 for u in users if u.get("created_at", 0) > seven_days_ago)
-    new_30d = sum(1 for u in users if u.get("created_at", 0) > thirty_days_ago)
-
-    total_routes = sum(1 for _ in db.collection("routes").stream())
-    total_scored = sum(1 for _ in db.collection("scored_routes").stream())
-    total_waitlist = sum(1 for _ in db.collection("waitlist").stream())
+    # Use aggregation queries to count without fetching documents
+    total_users = db.collection("users").count().get()[0][0].value
+    new_7d = db.collection("users").where("created_at", ">=", seven_days_ago).count().get()[0][0].value
+    new_30d = db.collection("users").where("created_at", ">=", thirty_days_ago).count().get()[0][0].value
+    total_routes = db.collection("routes").count().get()[0][0].value
+    total_scored = db.collection("scored_routes").count().get()[0][0].value
+    total_waitlist = db.collection("waitlist").count().get()[0][0].value
 
     return JSONResponse({
         "total_users": total_users,
@@ -239,13 +239,18 @@ async def _list_collection(request: Request, collection_name: str, default_sort:
     page = int(request.query_params.get("page", 1))
     per_page = int(request.query_params.get("per_page", 25))
 
+    # Fetch only needed fields — skip large blobs (gpx_compressed, gpx_raw, profile)
+    select_fields = [
+        "name", "date", "composite", "descriptor", "fingerprint", "gpx_hash",
+        "scored_at", "created_at",
+        "scoreClass", "densityScore", "intensityScore", "continuityScore",
+        "totalDist", "totalGain", "totalLoss", "gainPerKm",
+        "minEle", "maxEle", "bands", "bandColors",
+    ]
     routes = []
-    for doc in db.collection(collection_name).stream():
+    for doc in db.collection(collection_name).select(select_fields).stream():
         data = _sanitize(doc.to_dict())
         data["doc_id"] = doc.id
-        data.pop("gpx_compressed", None)
-        data.pop("gpx_raw", None)
-        data.pop("profile", None)
         routes.append(data)
 
     if q:
@@ -301,7 +306,7 @@ async def admin_download_gpx(request: Request):
     if data.get("gpx_compressed"):
         try:
             gpx_xml = gzip.decompress(base64.b64decode(data["gpx_compressed"])).decode()
-        except Exception:
+        except (gzip.BadGzipFile, binascii.Error, UnicodeDecodeError):
             pass
 
     if not gpx_xml and data.get("gpx_raw"):

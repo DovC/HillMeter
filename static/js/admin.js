@@ -158,8 +158,10 @@ function renderScoredTable(routes) {
   const tbody = document.getElementById('scoredTableBody');
   if (!routes.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:#9CA3AF;">No scored routes found</td></tr>'; return; }
   tbody.innerHTML = routes.map(r => {
-    const distMi = r.total_dist_km ? (r.total_dist_km * 0.621371).toFixed(1) : '?';
-    const gainFt = r.total_gain ? Math.round(r.total_gain * 3.28084) : '?';
+    const distKm = r.totalDist || r.total_dist_km;
+    const distMi = distKm ? (distKm * 0.621371).toFixed(1) : '?';
+    const gain = r.totalGain || r.total_gain;
+    const gainFt = gain ? Math.round(gain * 3.28084) : '?';
     const scoreClass = getScoreClass(r.composite);
     return `
       <tr>

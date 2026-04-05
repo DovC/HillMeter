@@ -18,6 +18,9 @@ import hashlib
 import json
 import gzip
 import base64
+import logging
+
+logger = logging.getLogger(__name__)
 import time
 from collections import defaultdict
 
@@ -90,8 +93,8 @@ WAITLIST_BASE_COUNT = 1742  # Starting base for social proof
 @app.get("/api/waitlist/count")
 async def waitlist_count():
     """Count with base offset for social proof (no PII exposed)."""
-    docs = db.collection("waitlist").get()
-    return JSONResponse({"count": WAITLIST_BASE_COUNT + len(docs)})
+    count = db.collection("waitlist").count().get()[0][0].value
+    return JSONResponse({"count": WAITLIST_BASE_COUNT + count})
 
 # ============ AUTH API ============
 
@@ -134,7 +137,7 @@ def _gpx_fingerprint(gpx_xml: str, dist_km: float) -> str | None:
         elat = round(float(pts[-1].attrib["lat"]), 2)
         elon = round(float(pts[-1].attrib["lon"]), 2)
         return f"{slat}_{slon}_{elat}_{elon}_{round(dist_km)}"
-    except Exception:
+    except (ET.ParseError, KeyError, ValueError, IndexError):
         return None
 
 
@@ -147,32 +150,15 @@ def _save_anonymous_route(result, gpx_xml: str):
         fingerprint = _gpx_fingerprint(gpx_xml, result.total_dist_km)
 
         gpx_compressed = base64.b64encode(gzip.compress(gpx_xml.encode())).decode()
-        db.collection("scored_routes").add({
-            "fingerprint": fingerprint,
-            "gpx_hash": gpx_hash,
-            "gpx_compressed": gpx_compressed,
-            "name": result.name,
-            "date": result.date,
-            "scored_at": datetime.now(timezone.utc).isoformat(),
-            "composite": result.composite,
-            "descriptor": result.descriptor,
-            "score_class": result.score_class,
-            "density_score": result.density_score,
-            "intensity_score": result.intensity_score,
-            "continuity_score": result.continuity_score,
-            "total_dist_km": result.total_dist_km,
-            "total_gain": result.total_gain,
-            "total_loss": result.total_loss,
-            "min_ele": result.min_ele,
-            "max_ele": result.max_ele,
-            "gain_per_km": result.gain_per_km,
-            "climb_dist": result.climb_dist,
-            "bands": result.bands,
-            "band_colors": result.band_colors,
-            "profile": result.profile,
-        })
+
+        doc = result.to_dict()
+        doc["fingerprint"] = fingerprint
+        doc["gpx_hash"] = gpx_hash
+        doc["gpx_compressed"] = gpx_compressed
+        doc["scored_at"] = datetime.now(timezone.utc).isoformat()
+        db.collection("scored_routes").add(doc)
     except Exception:
-        pass  # Never let anonymous save affect the user-facing response
+        logger.exception("Failed to save anonymous route")
 
 
 @app.post("/api/score")
@@ -303,15 +289,24 @@ async def list_routes(request: Request):
             .where("user_id", "==", user["user_id"]) \
             .get()
 
+        links_data = [(link.id, link.to_dict()) for link in links]
+
+        if not links_data:
+            return JSONResponse({"routes": []})
+
+        # Batch fetch all route documents in one call (fixes N+1 query)
+        route_refs = [db.collection("routes").document(ld.get("route_id", "")) for _, ld in links_data]
+        route_docs = list(db.get_all(route_refs))
+        route_map = {doc.id: doc.to_dict() for doc in route_docs if doc.exists}
+
         routes = []
-        for link in links:
-            link_data = link.to_dict()
-            route_doc = db.collection("routes").document(link_data["route_id"]).get()
-            if route_doc.exists:
-                route_data = route_doc.to_dict()
+        for link_id, link_data in links_data:
+            route_id = link_data.get("route_id", "")
+            route_data = route_map.get(route_id)
+            if route_data:
                 routes.append({
-                    "id": link_data["route_id"],
-                    "link_id": link.id,
+                    "id": route_id,
+                    "link_id": link_id,
                     "name": link_data.get("display_name", route_data.get("name", "")),
                     "date": route_data.get("date", ""),
                     "composite": route_data.get("composite", 0),
@@ -340,9 +335,10 @@ async def get_route(route_id: str, request: Request):
             return JSONResponse({"error": "Route not found"}, status_code=404)
 
         data = route_doc.to_dict()
-        # Don't return raw GPX on public endpoint
+        # Don't return raw/compressed GPX on public endpoint
         data.pop("gpx_raw", None)
         data.pop("gpx_hash", None)
+        data.pop("gpx_compressed", None)
         data["id"] = route_id
         return JSONResponse(data)
 
@@ -397,6 +393,7 @@ async def posthog_proxy(path: str, request: Request):
             media_type=resp.headers.get("content-type", "application/json")
         )
     except Exception:
+        logger.warning("PostHog proxy failed", exc_info=True)
         return Response(status_code=502)
 
 # Serve HTML files with no-cache headers, static assets normally

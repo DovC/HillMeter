@@ -13,7 +13,7 @@ Every GPX file scored by HillMeter is saved anonymously to a Firestore collectio
 
 To filter (e.g. routes over 20km):
 - Click **Filter** above the document list
-- Field: `total_dist_km`, Operator: `>=`, Value: `20`
+- Field: `totalDist`, Operator: `>=`, Value: `20`
 
 ---
 
@@ -55,9 +55,9 @@ docs = db.collection("scored_routes").stream()
 df = pd.DataFrame([d.to_dict() for d in docs])
 
 # Drop large fields not needed for numeric analysis
-df = df.drop(columns=["gpx_raw", "profile", "bands", "band_colors"], errors="ignore")
+df = df.drop(columns=["gpx_raw", "profile", "bands", "bandColors"], errors="ignore")
 
-print(df[["name", "composite", "descriptor", "total_dist_km", "total_gain", "scored_at"]].head(20))
+print(df[["name", "composite", "descriptor", "totalDist", "totalGain", "scored_at"]].head(20))
 ```
 
 ### Filter by score or distance
@@ -112,25 +112,25 @@ The export is in Firestore's LevelDB format. To convert to JSON/CSV, load it bac
 |---|---|---|
 | `fingerprint` | string | Fuzzy dedup key: `{start_lat}_{start_lon}_{end_lat}_{end_lon}_{dist_km}` |
 | `gpx_hash` | string | SHA256 of raw GPX (first 16 chars) |
-| `gpx_raw` | string | Full GPX XML |
+| `gpx_compressed` | string | Gzipped + base64-encoded GPX XML |
 | `name` | string | Route name from GPX file |
 | `date` | string | Timestamp from GPX (ISO 8601) |
 | `scored_at` | string | Server time when scored (ISO 8601 UTC) |
 | `composite` | int | Final hilliness score 0–100 |
 | `descriptor` | string | e.g. "Flat", "Rolling", "Very Hilly" |
-| `score_class` | string | CSS class (e.g. "score-hilly") |
-| `density_score` | int | Climb density component (0–100) |
-| `intensity_score` | int | Gradient intensity component (0–100) |
-| `continuity_score` | int | Climb continuity component (0–100) |
-| `total_dist_km` | float | Route distance in km |
-| `total_gain` | float | Total elevation gain in meters |
-| `total_loss` | float | Total elevation loss in meters |
-| `min_ele` | float | Minimum elevation in meters |
-| `max_ele` | float | Maximum elevation in meters |
-| `gain_per_km` | float | Elevation gain per km |
-| `climb_dist` | float | Distance spent climbing in km |
+| `scoreClass` | string | CSS class (e.g. "score-hilly") |
+| `densityScore` | int | Climb density component (0–100) |
+| `intensityScore` | int | Gradient intensity component (0–100) |
+| `continuityScore` | int | Climb continuity component (0–100) |
+| `totalDist` | float | Route distance in km |
+| `totalGain` | float | Total elevation gain in meters |
+| `totalLoss` | float | Total elevation loss in meters |
+| `minEle` | float | Minimum elevation in meters |
+| `maxEle` | float | Maximum elevation in meters |
+| `gainPerKm` | float | Elevation gain per km |
+| `climbDist` | float | Distance spent climbing in km |
 | `bands` | map | Gradient distribution (easy/moderate/hard/severe) |
-| `band_colors` | map | Hex colors for each gradient band |
+| `bandColors` | map | Hex colors for each gradient band |
 | `profile` | array | 500-point elevation profile `[{dist, ele}, ...]` |
 
 ---

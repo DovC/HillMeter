@@ -4,7 +4,10 @@ import os
 import time
 import secrets
 import hashlib
+import logging
 import httpx
+
+logger = logging.getLogger(__name__)
 from jose import jwt
 from fastapi import Request, Response
 from fastapi.responses import RedirectResponse, JSONResponse
@@ -59,7 +62,7 @@ def get_current_user(request: Request) -> dict | None:
             "auth_method": payload.get("auth_method", "strava"),
             "is_admin": payload.get("is_admin", False),
         }
-    except Exception:
+    except (jwt.JWTError, KeyError):
         return None
 
 
@@ -159,8 +162,18 @@ async def verify_magic_link(request: Request):
     existing = user_ref.get()
 
     if existing.exists:
-        user_ref.update({"last_login": time.time()})
         fs_data = existing.to_dict()
+        # Collision guard: verify stored email matches the authenticating email
+        if fs_data.get("email", "").lower() != email.lower():
+            logger.error(
+                "Doc ID collision: existing email=%s, new email=%s, doc_id=%s",
+                fs_data.get("email"), email, user_doc_id
+            )
+            return _magic_link_error(
+                "Unable to create your account due to a system conflict. "
+                "Please contact support."
+            )
+        user_ref.update({"last_login": time.time()})
         user_data = {
             "user_id": user_doc_id,
             "email": email,
