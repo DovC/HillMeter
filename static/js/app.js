@@ -574,7 +574,9 @@ function renderResults(results) {
     const card = document.createElement('div');
     card.className = 'score-card';
 
-    const bandEntries = Object.entries(r.bands);
+    // Enforce easy→moderate→hard→severe order — Firestore doesn't guarantee map key order
+    const BAND_ORDER = ['easy', 'moderate', 'hard', 'severe'];
+    const bandEntries = BAND_ORDER.filter(k => r.bands[k] !== undefined).map(k => [k, r.bands[k]]);
     const totalBandDist = bandEntries.reduce((s, [,b]) => s + b.dist, 0);
 
     const dateLine = r.date ? ` on ${r.date}` : '';
@@ -1189,6 +1191,9 @@ async function toggleSidebarRoute(routeId) {
     const route = await resp.json();
     route._savedRouteId = routeId;
     route._fromSidebar = true;
+    // Use display_name from sidebar cache — route doc stores original GPX name, not user renames
+    const sidebarMeta = sidebarRoutesCache?.find(r => r.id === routeId);
+    if (sidebarMeta) route.name = sidebarMeta.name;
     loadedRoutes.push(route);
     updateUI();
     renderSidebarItems();
@@ -1331,6 +1336,12 @@ async function saveRouteName() {
 
     if (resp.ok) {
       closeEditRouteName();
+      // Update any loaded comparison route with the new name immediately
+      const loaded = loadedRoutes.find(r => r._savedRouteId === editingRouteId);
+      if (loaded) {
+        loaded.name = newName;
+        updateUI();
+      }
       loadSidebarRoutes();
       if (document.getElementById('myRoutesTab')?.classList.contains('visible')) {
         loadMyRoutes();

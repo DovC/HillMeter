@@ -9,6 +9,7 @@ import math
 import statistics
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Optional
 
 
@@ -140,7 +141,6 @@ def parse_gpx(xml_string: str) -> dict:
         time_el = root.find(f".//{ns}metadata/{ns}time")
     if time_el is not None and time_el.text:
         try:
-            from datetime import datetime
             dt = datetime.fromisoformat(time_el.text.replace("Z", "+00:00"))
             date = dt.strftime("%b %d, %Y")
         except (ValueError, TypeError):
@@ -244,7 +244,7 @@ def median_filter(points: list[Point], window_size: int = MEDIAN_WINDOW) -> list
 
 def smooth_elevation(points: list[Point], window_size: int = SMOOTH_WINDOW) -> list[Point]:
     """Two-pass smoothing: median filter then moving average."""
-    despiked = median_filter(points, MEDIAN_WINDOW)
+    despiked = median_filter(points, window_size)
     half = window_size // 2
     result = []
     for i, p in enumerate(despiked):
@@ -411,9 +411,9 @@ def compute_score(gpx_xml: str, name: str = None, mode: str = "running") -> Scor
     # Dead-band elevation gain/loss (Option B: adaptive threshold)
     gain, loss = compute_dead_band_gain(smoothed)  # threshold=None → auto-detect
 
-    # Initialize tracking
-    min_ele = float("inf")
-    max_ele = float("-inf")
+    # Elevation range from smoothed points (10m resolution — captures true peaks)
+    min_ele = min(p.ele for p in smoothed)
+    max_ele = max(p.ele for p in smoothed)
 
     bands = {
         "easy": {"min": 0, "max": 4, "dist": 0.0, "label": "0–4%"},
@@ -435,13 +435,6 @@ def compute_score(gpx_xml: str, name: str = None, mode: str = "running") -> Scor
     current_climb = None
 
     for seg in segments:
-        # Track elevation range
-        for ele in (seg.start_ele, seg.end_ele):
-            if ele < min_ele:
-                min_ele = ele
-            if ele > max_ele:
-                max_ele = ele
-
         # Only climbing segments contribute to score
         if seg.gradient > CLIMB_GRADIENT_THRESHOLD:
             abs_grad = seg.gradient  # always positive in this branch
@@ -545,17 +538,16 @@ def compute_score(gpx_xml: str, name: str = None, mode: str = "running") -> Scor
     else:
         descriptor, score_class = "Mountainous", "score-mountainous"
 
-    # Build elevation profile (subsampled for client rendering)
+    # Build elevation profile from segments (reuses already-computed distances — no extra haversine calls)
     profile_points = []
-    cd = 0.0
-    for i, p in enumerate(smoothed):
-        if i > 0:
-            cd += haversine(smoothed[i - 1].lat, smoothed[i - 1].lon, p.lat, p.lon)
-        profile_points.append({"dist": cd, "ele": p.ele})
+    if segments:
+        profile_points.append({"dist": 0.0, "ele": segments[0].start_ele})
+        for seg in segments:
+            profile_points.append({"dist": seg.cum_dist, "ele": seg.end_ele})
 
     step = max(1, len(profile_points) // 500)
     sampled_profile = [profile_points[i] for i in range(0, len(profile_points), step)]
-    if sampled_profile[-1] != profile_points[-1]:
+    if profile_points and sampled_profile[-1] != profile_points[-1]:
         sampled_profile.append(profile_points[-1])
 
     return ScoringResult(
