@@ -7,10 +7,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, Response, RedirectResponse
 from datetime import datetime, timezone
 from db import db
-from scoring import compute_score
+from scoring import compute_score, ALGO_VERSION
 from auth import strava_login, strava_callback, get_me, logout, update_profile, delete_account, get_current_user, send_magic_link, verify_magic_link
 from admin import (admin_stats, admin_list_users, admin_get_user, admin_update_user,
-                   admin_delete_user, admin_list_routes, admin_list_scored_routes, admin_download_gpx)
+                   admin_delete_user, admin_list_routes, admin_list_scored_routes,
+                   admin_download_gpx, admin_batch_rescore)
 import httpx
 import os
 import re
@@ -121,6 +122,7 @@ app.add_api_route("/api/admin/users/{user_id}", admin_delete_user, methods=["DEL
 app.add_api_route("/api/admin/routes", admin_list_routes, methods=["GET"])
 app.add_api_route("/api/admin/scored-routes", admin_list_scored_routes, methods=["GET"])
 app.add_api_route("/api/admin/download/{doc_id}", admin_download_gpx, methods=["GET"])
+app.add_api_route("/api/admin/rescore", admin_batch_rescore, methods=["POST"])
 
 # ============ SCORING API ============
 
@@ -246,6 +248,7 @@ async def save_route(request: Request):
                 "bands": score_data.get("bands", {}),
                 "bandColors": score_data.get("bandColors", {}),
                 "profile": score_data.get("profile", []),
+                "algo_version": ALGO_VERSION,
                 "created_at": datetime.now(timezone.utc).isoformat(),
             }
             _, route_ref = db.collection("routes").add(route_doc)

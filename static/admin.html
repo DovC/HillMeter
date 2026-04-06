@@ -38,6 +38,14 @@
       <div class="stat-card"><div class="label">All Scored</div><div class="value" id="statScored">-</div></div>
       <div class="stat-card"><div class="label">Waitlist</div><div class="value" id="statWaitlist">-</div></div>
     </div>
+    <div class="rescore-panel" id="rescorePanel" style="display:none">
+      <div class="rescore-panel-info">
+        <strong id="rescoreHeading">-</strong>
+        <span id="rescoreSubtext" style="color:#6B7280;font-size:0.875rem;"></span>
+      </div>
+      <button class="btn-primary" id="rescoreBtn" onclick="rescoreRoutes()">Rescore stale routes</button>
+    </div>
+    <div id="rescoreResult" style="margin-top:12px;font-size:0.875rem;"></div>
   </section>
 
   <!-- Users -->

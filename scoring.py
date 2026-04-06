@@ -97,6 +97,10 @@ class ScoringResult:
 
 # ============ CONSTANTS ============
 
+# Algorithm version — bump when scoring behavior changes meaningfully (weights, ceilings,
+# dead-band constants, smoothing params). Triggers stale-route detection in admin.
+ALGO_VERSION = "2"
+
 # Scoring weights
 WEIGHT_DENSITY = 0.40
 WEIGHT_INTENSITY = 0.35

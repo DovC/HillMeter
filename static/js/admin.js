@@ -44,7 +44,41 @@ async function loadDashboard() {
     document.getElementById('statRoutes').textContent = data.total_routes;
     document.getElementById('statScored').textContent = data.total_scored_routes;
     document.getElementById('statWaitlist').textContent = data.total_waitlist;
+
+    const panel = document.getElementById('rescorePanel');
+    const stale = data.stale_routes ?? 0;
+    if (stale > 0) {
+      document.getElementById('rescoreHeading').textContent = `${stale} route${stale === 1 ? '' : 's'} on stale scoring algorithm`;
+      document.getElementById('rescoreSubtext').textContent = `Current version: v${data.current_algo_version}`;
+      panel.style.display = 'flex';
+    } else {
+      panel.style.display = 'none';
+    }
+    document.getElementById('rescoreResult').textContent = '';
   } catch (e) { console.error('Failed to load stats:', e); }
+}
+
+async function rescoreRoutes() {
+  const btn = document.getElementById('rescoreBtn');
+  btn.textContent = 'Rescoring…';
+  btn.disabled = true;
+  document.getElementById('rescoreResult').textContent = '';
+  try {
+    const resp = await fetch('/api/admin/rescore', { method: 'POST' });
+    const data = await resp.json();
+    if (resp.ok) {
+      const msg = `Done — ${data.rescored} rescored, ${data.errors} error${data.errors === 1 ? '' : 's'}.`;
+      document.getElementById('rescoreResult').textContent = msg;
+      loadDashboard();  // Refresh stale count
+    } else {
+      document.getElementById('rescoreResult').textContent = `Error: ${data.error}`;
+    }
+  } catch (e) {
+    document.getElementById('rescoreResult').textContent = 'Request failed.';
+  } finally {
+    btn.textContent = 'Rescore stale routes';
+    btn.disabled = false;
+  }
 }
 
 // ============ USERS ============

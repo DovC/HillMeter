@@ -38,6 +38,13 @@
   .stat-card .label { font-size: var(--text-label); color: var(--color-green-500); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 800; margin-bottom: var(--space-2); }
   .stat-card .value { font-size: 2rem; font-weight: 800; color: var(--color-forest-text); }
 
+  .rescore-panel {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+    background: var(--color-white); border-radius: var(--radius-lg); padding: var(--space-4) var(--space-5);
+    box-shadow: var(--shadow-sm); border-left: 4px solid var(--color-gold);
+  }
+  .rescore-panel-info { display: flex; flex-direction: column; gap: 2px; }
+
   /* Search bar */
   .search-bar {
     display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4);

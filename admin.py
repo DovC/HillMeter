@@ -9,6 +9,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse, Response
 from db import db
 from auth import get_current_user
+from scoring import compute_score, ALGO_VERSION
 
 # Bootstrap: To create the first admin, set is_admin=True in Firestore console:
 # db.collection("users").document("<user_doc_id>").update({"is_admin": True})
@@ -70,6 +71,12 @@ async def admin_stats(request: Request):
     total_scored = db.collection("scored_routes").count().get()[0][0].value
     total_waitlist = db.collection("waitlist").count().get()[0][0].value
 
+    # Count routes missing algo_version or on an older version
+    stale_routes = sum(
+        1 for doc in db.collection("routes").select(["algo_version"]).stream()
+        if doc.to_dict().get("algo_version") != ALGO_VERSION
+    )
+
     return JSONResponse({
         "total_users": total_users,
         "new_users_7d": new_7d,
@@ -77,6 +84,8 @@ async def admin_stats(request: Request):
         "total_routes": total_routes,
         "total_scored_routes": total_scored,
         "total_waitlist": total_waitlist,
+        "stale_routes": stale_routes,
+        "current_algo_version": ALGO_VERSION,
     })
 
 
@@ -321,3 +330,64 @@ async def admin_download_gpx(request: Request):
         media_type="application/gpx+xml",
         headers={"Content-Disposition": f'attachment; filename="{name}.gpx"'},
     )
+
+
+# ============ BATCH RESCORE ============
+
+async def admin_batch_rescore(request: Request):
+    """Rescore all saved routes that are on a stale algorithm version."""
+    admin = await _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    rescored = 0
+    errors = 0
+
+    for doc in db.collection("routes").stream():
+        data = doc.to_dict()
+        if data.get("algo_version") == ALGO_VERSION:
+            continue  # Already current
+
+        gpx_xml = None
+        if data.get("gpx_compressed"):
+            try:
+                gpx_xml = gzip.decompress(base64.b64decode(data["gpx_compressed"])).decode()
+            except (gzip.BadGzipFile, binascii.Error, UnicodeDecodeError):
+                pass
+        if not gpx_xml and data.get("gpx_raw"):
+            gpx_xml = data["gpx_raw"]
+
+        if not gpx_xml:
+            errors += 1
+            continue
+
+        try:
+            result = compute_score(gpx_xml, name=data.get("name"))
+            d = result.to_dict()
+            doc.reference.update({
+                "composite":       d["composite"],
+                "descriptor":      d["descriptor"],
+                "scoreClass":      d["scoreClass"],
+                "densityScore":    d["densityScore"],
+                "intensityScore":  d["intensityScore"],
+                "continuityScore": d["continuityScore"],
+                "totalDist":       d["totalDist"],
+                "totalGain":       d["totalGain"],
+                "totalLoss":       d["totalLoss"],
+                "gainPerKm":       d["gainPerKm"],
+                "minEle":          d["minEle"],
+                "maxEle":          d["maxEle"],
+                "bands":           d["bands"],
+                "bandColors":      d["bandColors"],
+                "profile":         d["profile"],
+                "algo_version":    ALGO_VERSION,
+            })
+            rescored += 1
+        except Exception:
+            errors += 1
+
+    return JSONResponse({
+        "rescored": rescored,
+        "errors": errors,
+        "algo_version": ALGO_VERSION,
+    })
