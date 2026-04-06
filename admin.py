@@ -358,6 +358,8 @@ async def admin_batch_rescore(request: Request):
             gpx_xml = data["gpx_raw"]
 
         if not gpx_xml:
+            # No GPX available — can't rescore, but stamp version so it stops showing as stale
+            doc.reference.update({"algo_version": ALGO_VERSION})
             errors += 1
             continue
 
