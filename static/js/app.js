@@ -1045,6 +1045,35 @@ async function unsaveRoute(idx) {
   }
 }
 
+// ============ ROUTE SORTING ============
+function getRouteSort() {
+  return localStorage.getItem('verthurt-route-sort') || 'recent';
+}
+
+function sortRoutes(routes, key) {
+  const copy = [...routes];
+  switch (key) {
+    case 'name': return copy.sort((a, b) => a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}));
+    case 'score-desc': return copy.sort((a, b) => b.composite - a.composite);
+    case 'score-asc': return copy.sort((a, b) => a.composite - b.composite);
+    default: return copy.sort((a, b) => (b.saved_at || '').localeCompare(a.saved_at || ''));
+  }
+}
+
+function syncSortDropdowns(value) {
+  const routeSort = document.getElementById('routeSort');
+  const sidebarSort = document.getElementById('sidebarSort');
+  if (routeSort) routeSort.value = value;
+  if (sidebarSort) sidebarSort.value = value;
+}
+
+function onSortChange(value) {
+  localStorage.setItem('verthurt-route-sort', value);
+  syncSortDropdowns(value);
+  renderMyRoutes();
+  renderSidebarItems();
+}
+
 // ============ SAVED ROUTES SIDEBAR ============
 const scoreBadgeColors = {
   'score-flat': '#059669',
@@ -1058,6 +1087,7 @@ let sidebarRoutesCache = null;
 async function loadSidebarRoutes() {
   const sidebar = document.getElementById('savedRoutesSidebar');
   const list = document.getElementById('sidebarRouteList');
+  syncSortDropdowns(getRouteSort());
 
   if (!isAuthenticated()) {
     // Show sidebar with sign-in prompt as feature hint
@@ -1102,8 +1132,9 @@ function renderSidebarItems() {
   const list = document.getElementById('sidebarRouteList');
   if (!sidebarRoutesCache) return;
 
+  const sorted = sortRoutes(sidebarRoutesCache, getRouteSort());
   list.innerHTML = '';
-  sidebarRoutesCache.forEach(route => {
+  sorted.forEach(route => {
     const isActive = loadedRoutes.some(r => r._savedRouteId === route.id);
     const distMi = (route.totalDist * 0.621371).toFixed(1);
     const badgeColor = scoreBadgeColors[route.scoreClass] || '#6B7280';
@@ -1169,9 +1200,49 @@ async function toggleSidebarRoute(routeId) {
 }
 
 // ============ MY ROUTES ============
+let myRoutesCache = null;
+
+function renderMyRoutes() {
+  const grid = document.getElementById('routesGrid');
+  if (!myRoutesCache || myRoutesCache.length === 0) return;
+
+  const sorted = sortRoutes(myRoutesCache, getRouteSort());
+  grid.innerHTML = '';
+  sorted.forEach(route => {
+    const card = document.createElement('div');
+    card.className = 'route-card';
+    const distMi = (route.totalDist * 0.621371).toFixed(1);
+    const gainFt = (route.totalGain * 3.28084).toFixed(0);
+    card.innerHTML = `
+      <button class="delete-btn" onclick="event.stopPropagation(); deleteRoute('${route.id}', '${route.link_id}')" title="Remove from library">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+      </button>
+      <button class="edit-name-btn card-edit-btn" onclick="event.stopPropagation(); openEditRouteName('${route.id}', '${route.link_id}', '${esc(route.name).replace(/'/g, "\\'")}')" title="Rename route">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+      </button>
+      <div class="route-card-header">
+        <div>
+          <div class="route-name">${esc(route.name)}</div>
+          <div class="route-meta">${distMi} mi${route.date ? ' · ' + esc(route.date) : ''}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="mini-score ${esc(route.scoreClass)}">${route.composite}</div>
+          <div class="mini-descriptor ${esc(route.scoreClass)}">${esc(route.descriptor)}</div>
+        </div>
+      </div>
+      <div class="route-card-stats">
+        <div>Gain: <span>${gainFt} ft</span></div>
+      </div>
+    `;
+    card.addEventListener('click', () => viewSavedRoute(route.id));
+    grid.appendChild(card);
+  });
+}
+
 async function loadMyRoutes() {
   const grid = document.getElementById('routesGrid');
   grid.innerHTML = '<div class="empty-routes"><p>Loading...</p></div>';
+  syncSortDropdowns(getRouteSort());
 
   try {
     const resp = await fetch('/api/routes');
@@ -1190,36 +1261,8 @@ async function loadMyRoutes() {
       return;
     }
 
-    grid.innerHTML = '';
-    data.routes.forEach(route => {
-      const card = document.createElement('div');
-      card.className = 'route-card';
-      const distMi = (route.totalDist * 0.621371).toFixed(1);
-      const gainFt = (route.totalGain * 3.28084).toFixed(0);
-      card.innerHTML = `
-        <button class="delete-btn" onclick="event.stopPropagation(); deleteRoute('${route.id}', '${route.link_id}')" title="Remove from library">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-        </button>
-        <button class="edit-name-btn card-edit-btn" onclick="event.stopPropagation(); openEditRouteName('${route.id}', '${route.link_id}', '${esc(route.name).replace(/'/g, "\\'")}')" title="Rename route">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 114 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-        </button>
-        <div class="route-card-header">
-          <div>
-            <div class="route-name">${esc(route.name)}</div>
-            <div class="route-meta">${distMi} mi${route.date ? ' · ' + esc(route.date) : ''}</div>
-          </div>
-          <div style="text-align:right">
-            <div class="mini-score ${esc(route.scoreClass)}">${route.composite}</div>
-            <div class="mini-descriptor ${esc(route.scoreClass)}">${esc(route.descriptor)}</div>
-          </div>
-        </div>
-        <div class="route-card-stats">
-          <div>Gain: <span>${gainFt} ft</span></div>
-        </div>
-      `;
-      card.addEventListener('click', () => viewSavedRoute(route.id));
-      grid.appendChild(card);
-    });
+    myRoutesCache = data.routes;
+    renderMyRoutes();
   } catch (err) {
     grid.innerHTML = '<div class="empty-routes"><p>Failed to load routes</p></div>';
     console.error('Load routes error:', err);

@@ -445,6 +445,12 @@
 
       <aside class="saved-routes-sidebar" id="savedRoutesSidebar">
         <div class="sidebar-header">My Routes</div>
+        <select id="sidebarSort" class="sidebar-sort" onchange="onSortChange(this.value)">
+          <option value="recent">Recent</option>
+          <option value="name">Name (A-Z)</option>
+          <option value="score-desc">Score (Hi-Lo)</option>
+          <option value="score-asc">Score (Lo-Hi)</option>
+        </select>
         <div class="sidebar-route-list" id="sidebarRouteList"></div>
       </aside>
     </div>
@@ -452,6 +458,15 @@
 
   <!-- My Routes tab content -->
   <div class="my-routes-section" id="myRoutesTab">
+    <div class="sort-bar">
+      <label for="routeSort">Sort:</label>
+      <select id="routeSort" onchange="onSortChange(this.value)">
+        <option value="recent">Recent</option>
+        <option value="name">Name (A-Z)</option>
+        <option value="score-desc">Score (Hi-Lo)</option>
+        <option value="score-asc">Score (Lo-Hi)</option>
+      </select>
+    </div>
     <div class="routes-grid" id="routesGrid"></div>
   </div>
 
