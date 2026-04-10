@@ -112,8 +112,11 @@
 (function() {
   var theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   document.documentElement.setAttribute('data-theme', theme);
+  document.documentElement.style.colorScheme = theme;
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-    document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+    var t = e.matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+    document.documentElement.style.colorScheme = t;
   });
 })();
 </script>

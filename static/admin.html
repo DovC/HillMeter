@@ -153,6 +153,7 @@ function applyTheme() {
   var pref = localStorage.getItem('verthurt-theme');
   var theme = (pref === 'dark' || pref === 'light') ? pref : _getSystemTheme();
   document.documentElement.setAttribute('data-theme', theme);
+  document.documentElement.style.colorScheme = theme === 'light' ? 'light' : theme === 'dark' ? 'dark' : 'light dark';
   _updateToggleIcon(pref);
 }
 function _updateToggleIcon(pref) {
