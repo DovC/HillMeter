@@ -159,6 +159,10 @@ button, input, select, textarea {
    2b. DARK MODE
 ============================================================================= */
 
+[data-theme="light"] {
+  color-scheme: light;  /* native dialogs match forced light mode even when OS is dark */
+}
+
 [data-theme="dark"] {
   color-scheme: dark;  /* native dialogs match forced dark mode */
   --color-forest-text:    #E8EDE5;
