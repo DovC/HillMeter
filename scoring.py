@@ -68,6 +68,7 @@ class ScoringResult:
     climb_dist: float
     profile: list  # [{dist, ele}, ...]
     segments: list
+    elevation_source: Optional[str] = None  # "google" | "device" | None
 
     def to_dict(self):
         return {
@@ -92,6 +93,7 @@ class ScoringResult:
             "bandColors": self.band_colors,
             "climbDist": self.climb_dist,
             "profile": self.profile,
+            "elevationSource": self.elevation_source,
         }
 
 
@@ -156,7 +158,7 @@ def parse_gpx(xml_string: str) -> dict:
         lat = float(trkpt.get("lat"))
         lon = float(trkpt.get("lon"))
         ele_el = trkpt.find(f"{ns}ele")
-        ele = float(ele_el.text) if ele_el is not None else 0.0
+        ele = float(ele_el.text) if ele_el is not None else None
         points.append(Point(lat, lon, ele))
 
     return {"name": name, "date": date, "points": points}
@@ -399,8 +401,31 @@ def compute_score(gpx_xml: str, name: str = None, mode: str = "running") -> Scor
     gpx_data = parse_gpx(gpx_xml)
     if name:
         gpx_data["name"] = name
+    return compute_score_from_parsed(gpx_data, mode=mode)
 
-    points = gpx_data["points"]
+
+def compute_score_from_parsed(gpx_data: dict, mode: str = "running") -> ScoringResult:
+    """
+    Compute the VertHurt hilliness score from a pre-parsed GPX dict.
+
+    Accepts the output of parse_gpx() (optionally with elevation already
+    normalized by elevation.normalize_elevations()). Any None elevations
+    remaining in points are replaced with 0.0 before scoring.
+
+    Args:
+        gpx_data: dict with keys "name", "date", "points" (list[Point])
+        mode: "running" or "cycling" (future)
+
+    Returns:
+        ScoringResult with all scores, stats, and profile data
+    """
+    # Replace any None elevations (GPX files with no <ele> tags + no API) with 0.0
+    raw_points = gpx_data["points"]
+    points = [
+        Point(p.lat, p.lon, p.ele if p.ele is not None else 0.0)
+        for p in raw_points
+    ]
+
     if len(points) < 2:
         raise ValueError("GPX file must contain at least 2 trackpoints")
 

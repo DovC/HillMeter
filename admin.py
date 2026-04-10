@@ -9,7 +9,8 @@ from fastapi import Request
 from fastapi.responses import JSONResponse, Response
 from db import db
 from auth import get_current_user
-from scoring import compute_score, ALGO_VERSION
+from scoring import compute_score, compute_score_from_parsed, parse_gpx, ALGO_VERSION
+from elevation import normalize_elevations
 
 # Bootstrap: To create the first admin, set is_admin=True in Firestore console:
 # db.collection("users").document("<user_doc_id>").update({"is_admin": True})
@@ -392,4 +393,81 @@ async def admin_batch_rescore(request: Request):
         "rescored": rescored,
         "errors": errors,
         "algo_version": ALGO_VERSION,
+    })
+
+
+# ============ BATCH ELEVATION NORMALIZATION ============
+
+async def admin_normalize_elevations(request: Request):
+    """
+    Retroactively normalize elevations for all saved routes that were scored
+    with device elevation (elevation_source != "google" or field missing).
+
+    Re-parses stored GPX, calls the elevation API, rescores, and updates the
+    route doc. Respects existing algo_version stamping.
+    """
+    admin = await _require_admin(request)
+    if not admin:
+        return JSONResponse({"error": "Forbidden"}, status_code=403)
+
+    normalized = 0
+    skipped = 0
+    errors = 0
+
+    for doc in db.collection("routes").stream():
+        data = doc.to_dict()
+
+        # Skip routes that already have Google-normalized elevation
+        if data.get("elevation_source") == "google":
+            skipped += 1
+            continue
+
+        gpx_xml = None
+        if data.get("gpx_compressed"):
+            try:
+                gpx_xml = gzip.decompress(base64.b64decode(data["gpx_compressed"])).decode()
+            except (gzip.BadGzipFile, binascii.Error, UnicodeDecodeError):
+                pass
+        if not gpx_xml and data.get("gpx_raw"):
+            gpx_xml = data["gpx_raw"]
+
+        if not gpx_xml:
+            errors += 1
+            continue
+
+        try:
+            gpx_data = parse_gpx(gpx_xml)
+            gpx_data["name"] = data.get("name", gpx_data.get("name", "Unnamed Route"))
+            normalized_points, ele_source = normalize_elevations(gpx_data["points"])
+            gpx_data["points"] = normalized_points
+
+            result = compute_score_from_parsed(gpx_data)
+            d = result.to_dict()
+            doc.reference.update({
+                "composite":        d["composite"],
+                "descriptor":       d["descriptor"],
+                "scoreClass":       d["scoreClass"],
+                "densityScore":     d["densityScore"],
+                "intensityScore":   d["intensityScore"],
+                "continuityScore":  d["continuityScore"],
+                "totalDist":        d["totalDist"],
+                "totalGain":        d["totalGain"],
+                "totalLoss":        d["totalLoss"],
+                "gainPerKm":        d["gainPerKm"],
+                "minEle":           d["minEle"],
+                "maxEle":           d["maxEle"],
+                "bands":            d["bands"],
+                "bandColors":       d["bandColors"],
+                "profile":          d["profile"],
+                "elevation_source": ele_source,
+                "algo_version":     ALGO_VERSION,
+            })
+            normalized += 1
+        except Exception:
+            errors += 1
+
+    return JSONResponse({
+        "normalized": normalized,
+        "skipped": skipped,
+        "errors": errors,
     })

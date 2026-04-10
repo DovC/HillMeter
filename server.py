@@ -7,11 +7,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, Response, RedirectResponse
 from datetime import datetime, timezone
 from db import db
-from scoring import compute_score, ALGO_VERSION
+from scoring import compute_score, compute_score_from_parsed, parse_gpx, ALGO_VERSION
+from elevation import normalize_elevations
 from auth import strava_login, strava_callback, get_me, logout, update_profile, delete_account, get_current_user, send_magic_link, verify_magic_link
 from admin import (admin_stats, admin_list_users, admin_get_user, admin_update_user,
                    admin_delete_user, admin_list_routes, admin_list_scored_routes,
-                   admin_download_gpx, admin_batch_rescore)
+                   admin_download_gpx, admin_batch_rescore, admin_normalize_elevations)
 import httpx
 import os
 import re
@@ -123,6 +124,7 @@ app.add_api_route("/api/admin/routes", admin_list_routes, methods=["GET"])
 app.add_api_route("/api/admin/scored-routes", admin_list_scored_routes, methods=["GET"])
 app.add_api_route("/api/admin/download/{doc_id}", admin_download_gpx, methods=["GET"])
 app.add_api_route("/api/admin/rescore", admin_batch_rescore, methods=["POST"])
+app.add_api_route("/api/admin/normalize-elevations", admin_normalize_elevations, methods=["POST"])
 
 # ============ SCORING API ============
 
@@ -158,6 +160,7 @@ def _save_anonymous_route(result, gpx_xml: str):
         doc["gpx_hash"] = gpx_hash
         doc["gpx_compressed"] = gpx_compressed
         doc["scored_at"] = datetime.now(timezone.utc).isoformat()
+        doc["elevation_source"] = result.elevation_source
         db.collection("scored_routes").add(doc)
     except Exception:
         logger.exception("Failed to save anonymous route")
@@ -186,7 +189,15 @@ async def score_route(request: Request, background_tasks: BackgroundTasks, file:
         name = re.sub(r"\.gpx$", "", file.filename, flags=re.IGNORECASE)
         name = name.replace("_", " ")
 
-        result = compute_score(gpx_xml, name=name, mode="running")
+        # Parse → normalize elevation → score
+        gpx_data = parse_gpx(gpx_xml)
+        gpx_data["name"] = name
+        normalized_points, ele_source = normalize_elevations(gpx_data["points"])
+        gpx_data["points"] = normalized_points
+
+        result = compute_score_from_parsed(gpx_data, mode="running")
+        result.elevation_source = ele_source
+
         background_tasks.add_task(_save_anonymous_route, result, gpx_xml)
         return JSONResponse(result.to_dict())
 
@@ -248,6 +259,7 @@ async def save_route(request: Request):
                 "bands": score_data.get("bands", {}),
                 "bandColors": score_data.get("bandColors", {}),
                 "profile": score_data.get("profile", []),
+                "elevation_source": score_data.get("elevationSource"),
                 "algo_version": ALGO_VERSION,
                 "created_at": datetime.now(timezone.utc).isoformat(),
             }
