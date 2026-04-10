@@ -1511,4 +1511,26 @@
     white-space: nowrap; transition: all var(--transition-fast);
   }
   .delete-account-btn:hover { background: #FEF2F2; border-color: var(--color-danger); }
+
+
+/* =============================================================================
+   DARK MODE OVERRIDES
+============================================================================= */
+
+/* Dropzone: strong "Drop GPX files here" text was --color-forest (#1C5C1E, dark
+   green) on a dark green background — override to gold for legibility */
+[data-theme="dark"] .dropzone-text strong {
+  color: var(--color-sun-gold);
+}
+
+/* Dropzone hover/dragover: hardcoded #F0F7F0 (light) doesn't work on dark bg */
+[data-theme="dark"] .dropzone:hover,
+[data-theme="dark"] .dropzone.dragover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* Sidebar active card: hardcoded #FFFCF0 (pale yellow) — light text on pale bg */
+[data-theme="dark"] .sidebar-route-item.active {
+  background: rgba(247, 201, 72, 0.12);
+}
   .danger-hint { font-size: 0.72rem; color: var(--color-green-500); }
