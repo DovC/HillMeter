@@ -31,6 +31,7 @@
 html {
   font-size: 16px;
   scroll-behavior: smooth;
+  color-scheme: light dark;  /* native dialogs (file picker etc.) follow OS preference */
 }
 
 body {
@@ -159,6 +160,7 @@ button, input, select, textarea {
 ============================================================================= */
 
 [data-theme="dark"] {
+  color-scheme: dark;  /* native dialogs match forced dark mode */
   --color-forest-text:    #E8EDE5;
   --color-green-500:      #9AB494;
   --color-page-bg:        #1A2A1B;
