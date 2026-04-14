@@ -150,15 +150,44 @@
     padding: var(--space-5);
     box-shadow: var(--shadow-sm);
     transition: box-shadow var(--transition-base), transform var(--transition-base);
+    position: relative;
+  }
+  .score-card-close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: none;
+    color: var(--color-green-500);
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.5;
+    transition: opacity var(--transition-base), background var(--transition-base);
+  }
+  .score-card-close:hover {
+    opacity: 1;
+    background: var(--color-border-light);
   }
   .score-card:hover {
     box-shadow: var(--shadow-md);
   }
   .score-card-header {
     display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+  }
+  .score-card-top {
+    display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 20px;
+    margin-bottom: var(--space-3);
   }
   .route-name {
     font-size: var(--text-h4);
@@ -745,7 +774,6 @@
 
   /* Thumbnail elevation profile in card */
   .thumb-profile {
-    margin-top: var(--space-3);
     height: 48px;
     position: relative;
   }

@@ -561,7 +561,9 @@ function renderResults(results) {
     if (r.minEle < globalMinEle) globalMinEle = r.minEle;
     if (r.maxEle > globalMaxEle) globalMaxEle = r.maxEle;
   });
-  // Enforce minimum range so flat routes don't look artificially hilly
+  // Raw values for thumbnails (let them auto-scale for better granularity)
+  const thumbMinEle = globalMinEle, thumbMaxEle = globalMaxEle;
+  // Enforce minimum range for main profile so flat routes don't look artificially hilly
   const MIN_GLOBAL_ELE_RANGE = 500; // meters (~1640ft)
   if (globalMaxEle - globalMinEle < MIN_GLOBAL_ELE_RANGE) {
     const mid = (globalMinEle + globalMaxEle) / 2;
@@ -581,17 +583,20 @@ function renderResults(results) {
 
     const dateLine = r.date ? ` on ${r.date}` : '';
     card.innerHTML = `
+      <button class="score-card-close" data-idx="${idx}" aria-label="Close">&times;</button>
       <div class="score-card-header">
-        <div>
-          <div class="route-name">${esc(r.name)}</div>
-          <div class="route-meta">${(r.totalDist * 0.621371).toFixed(2)} mi${esc(dateLine)}</div>
-          <div class="thumb-profile"><canvas id="thumb-canvas-${idx}"></canvas></div>
+        <div class="score-card-top">
+          <div>
+            <div class="route-name">${esc(r.name)}</div>
+            <div class="route-meta">${(r.totalDist * 0.621371).toFixed(2)} mi${esc(dateLine)}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="big-score ${esc(r.scoreClass)}">${r.composite}</div>
+            <div class="score-label">VertHurt</div>
+            <div class="score-descriptor ${esc(r.scoreClass)}">${esc(r.descriptor)}</div>
+          </div>
         </div>
-        <div style="text-align:right">
-          <div class="big-score ${esc(r.scoreClass)}">${r.composite}</div>
-          <div class="score-label">VertHurt</div>
-          <div class="score-descriptor ${esc(r.scoreClass)}">${esc(r.descriptor)}</div>
-        </div>
+        <div class="thumb-profile"><canvas id="thumb-canvas-${idx}"></canvas></div>
       </div>
       <div class="component-scores">
         <div class="component">
@@ -672,6 +677,18 @@ function renderResults(results) {
     `;
     profDiv.appendChild(profCard);
 
+    // Close button — remove route from loaded set
+    card.querySelector('.score-card-close').addEventListener('click', () => {
+      loadedRoutes.splice(idx, 1);
+      const newStore = {};
+      loadedRoutes.forEach((_, i) => {
+        const oldIdx = i >= idx ? i + 1 : i;
+        if (rawGpxStore[oldIdx] !== undefined) newStore[i] = rawGpxStore[oldIdx];
+      });
+      rawGpxStore = newStore;
+      updateUI();
+    });
+
     // If this route is already saved, mark the button
     if (r._savedRouteId) {
       const saveBtn = card.querySelector('.btn-save');
@@ -682,7 +699,7 @@ function renderResults(results) {
 
     requestAnimationFrame(() => {
       drawProfile(r, idx, globalMinEle, globalMaxEle);
-      drawThumbProfile(r, idx, globalMinEle, globalMaxEle);
+      drawThumbProfile(r, idx, thumbMinEle, thumbMaxEle);
     });
   });
 }
@@ -716,6 +733,7 @@ function drawProfile(result, idx, globalMinE, globalMaxE) {
     minE = mid - MIN_ELE_RANGE / 2;
     maxE = mid + MIN_ELE_RANGE / 2;
   }
+  minE = Math.max(0, minE); // never show negative elevation
   const eleRange = maxE - minE || 1;
 
   const toX = d => pad.left + (d / maxDist) * plotW;
@@ -809,13 +827,7 @@ function drawThumbProfile(result, idx, globalMinE, globalMaxE) {
   const pad = 2;
   let minE = (globalMinE != null ? globalMinE : Math.min(...prof.map(p => p.ele))) - 3;
   let maxE = (globalMaxE != null ? globalMaxE : Math.max(...prof.map(p => p.ele))) + 3;
-  // Enforce minimum Y-axis range (same as main profile)
-  const MIN_ELE_RANGE_THUMB = 500;
-  if (maxE - minE < MIN_ELE_RANGE_THUMB) {
-    const mid = (minE + maxE) / 2;
-    minE = mid - MIN_ELE_RANGE_THUMB / 2;
-    maxE = mid + MIN_ELE_RANGE_THUMB / 2;
-  }
+  minE = Math.max(0, minE); // never show negative elevation
   const eleRange = maxE - minE || 1;
 
   const toX = d => pad + (d / maxDist) * (w - pad * 2);
@@ -1423,10 +1435,11 @@ window.addEventListener('resize', () => {
   if (loadedRoutes.length > 0) {
     let gMin = Infinity, gMax = -Infinity;
     loadedRoutes.forEach(r => { if (r.minEle < gMin) gMin = r.minEle; if (r.maxEle > gMax) gMax = r.maxEle; });
-    // Enforce minimum range (same as renderResults)
-    if (gMax - gMin < 500) { const mid = (gMin + gMax) / 2; gMin = mid - 250; gMax = mid + 250; }
+    // Enforce minimum range for main profile only
+    let gMinProfile = gMin, gMaxProfile = gMax;
+    if (gMaxProfile - gMinProfile < 500) { const mid = (gMinProfile + gMaxProfile) / 2; gMinProfile = mid - 250; gMaxProfile = mid + 250; }
     loadedRoutes.forEach((r, i) => {
-      drawProfile(r, i, gMin, gMax);
+      drawProfile(r, i, gMinProfile, gMaxProfile);
       drawThumbProfile(r, i, gMin, gMax);
     });
   }
