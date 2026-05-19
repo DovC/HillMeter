@@ -468,10 +468,7 @@ async def serve_app():
 @app.get("/index.html")
 @app.get("/")
 async def serve_index():
-    return FileResponse("static/index.html", headers={
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        "Pragma": "no-cache"
-    })
+    return RedirectResponse(url="/app.html", status_code=302)
 
 # Other static assets (CSS, JS, images)
 app.mount("/", StaticFiles(directory="static", html=False), name="static")
