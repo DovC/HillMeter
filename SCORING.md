@@ -1,8 +1,8 @@
 # VertHurt Scoring Algorithm
 
-The hilliness score combines three dimensions of what makes a route feel hilly. Each component uses square root scaling, which expands differences between gentle and moderate routes while preserving meaningful separation at the top end — unlike logarithmic scaling, which compresses hard routes into an indistinguishable band near 100.
+The hilliness score combines four dimensions of what makes a route feel hilly. Each component uses square root scaling, which expands differences between gentle and moderate routes while preserving meaningful separation at the top end — unlike logarithmic scaling, which compresses hard routes into an indistinguishable band near 100.
 
-## 1. Climb Density (Volume) — 40% weight
+## 1. Climb Density (Volume) — 35% weight
 
 Total elevation gained divided by total distance. The most intuitive, universal metric — a marathon with 5,000ft of gain is objectively hillier than one with 1,200ft. Sqrt-scaled with a ceiling of ~264 ft/mi (50 m/km).
 
@@ -10,7 +10,7 @@ Total elevation gained divided by total distance. The most intuitive, universal 
 score = sqrt(gain_per_km / 50) x 100
 ```
 
-## 2. Gradient-Weighted Intensity — 35% weight
+## 2. Gradient-Weighted Intensity — 30% weight
 
 For each climbing segment, the gradient is raised to the power of 1.5 and multiplied by segment distance. The 1.5 exponent captures that steep grades are disproportionately hard without over-penalizing moderate grades. Sqrt-scaled with a ceiling of 25.
 
@@ -19,7 +19,7 @@ raw = sum(distance_i x gradient_i^1.5) / total_distance
 score = sqrt(raw / 25) x 100
 ```
 
-## 3. Climb Continuity — 25% weight
+## 3. Climb Continuity — 20% weight
 
 Measures how sustained and steep the climbs are. A route with one long 2km climb feels much hillier than one with twenty 100m bumps, even if total climbing distance is the same. Uses a gradient-weighted power-sum formula: each climb's length is raised to p=1.3 and multiplied by the climb's average gradient, naturally rewarding longer *and steeper* climbs disproportionately. Sqrt-scaled with a ceiling of 50.
 
@@ -35,11 +35,22 @@ density_dampen = min(1.0, (density_score / 40)^0.5)
 continuity_score = continuity_score x density_dampen
 ```
 
+## 4. Descent Intensity — 15% weight
+
+Steep descents (>4% grade) cause eccentric quad loading and are a major source of fatigue on mountain routes. Previously ignored by the algorithm, this component captures downhill difficulty using the same gradient-weighted formula as Intensity but applied only to descending segments steeper than 4%. Sqrt-scaled with a ceiling of 25.
+
+```
+raw = sum(distance_i x abs(gradient_i)^1.5) / total_distance   [segments where gradient < -4%]
+score = sqrt(raw / 25) x 100
+```
+
+A route with gentle, rolling descents scores 0 here. A point-to-point mountain stage with sustained 8–12% descents will score meaningfully, reflecting the quad-pounding difficulty that climb-only metrics miss.
+
 ## Noise Confidence Dampener
 
 On extremely flat routes, GPS noise that survives smoothing produces many segments barely above the 0.5% gradient threshold (just 12.5cm rise per 25m segment). These phantom "climbs" inflate all three score components. The dead-band filter is our best estimate of real elevation gain — when segment-based scoring gain vastly exceeds dead-band gain, most of the signal is noise.
 
-A dampener is applied to all three component scores before computing the composite:
+A dampener is applied to all four component scores before computing the composite:
 
 ```
 dampener = min(1.0, sqrt(dead_band_gain / scoring_gain))
@@ -63,7 +74,7 @@ GPS elevation data goes through four filtering passes:
 
 4. **Adaptive Dead-Band Threshold** — Eliminates GPS wobble: small oscillations that aren't real terrain changes but accumulate into phantom elevation gain. The dead-band adapts to signal quality: 3 meters for clean data (e.g., barometric altimeter), ramping up to 5 meters for noisy data (GPS-only altitude), based on the Median Absolute Deviation (MAD) of elevation changes. This approach mirrors Strava's elevation correction and produces gain figures consistent with corrected industry values.
 
-Only uphill segments exceeding 0.5% grade contribute to the score.
+Only uphill segments exceeding 0.5% grade contribute to climb-related scores. Only downhill segments steeper than 4% contribute to Descent Intensity.
 
 ## Score Ranges
 

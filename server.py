@@ -250,6 +250,7 @@ async def save_route(request: Request):
                 "densityScore": score_data.get("densityScore", 0),
                 "intensityScore": score_data.get("intensityScore", 0),
                 "continuityScore": score_data.get("continuityScore", 0),
+                "descentScore": score_data.get("descentScore", 0),
                 "totalDist": score_data.get("totalDist", 0),
                 "totalGain": score_data.get("totalGain", 0),
                 "totalLoss": score_data.get("totalLoss", 0),

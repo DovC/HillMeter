@@ -57,6 +57,7 @@ class ScoringResult:
     density_score: int
     intensity_score: int
     continuity_score: int
+    descent_score: int
     total_dist_km: float
     total_gain: float
     total_loss: float
@@ -80,6 +81,7 @@ class ScoringResult:
             "densityScore": self.density_score,
             "intensityScore": self.intensity_score,
             "continuityScore": self.continuity_score,
+            "descentScore": self.descent_score,
             "totalDist": self.total_dist_km,
             "totalGain": self.total_gain,
             "totalLoss": self.total_loss,
@@ -101,18 +103,21 @@ class ScoringResult:
 
 # Algorithm version — bump when scoring behavior changes meaningfully (weights, ceilings,
 # dead-band constants, smoothing params). Triggers stale-route detection in admin.
-ALGO_VERSION = "2"
+ALGO_VERSION = "3"
 
 # Scoring weights
-WEIGHT_DENSITY = 0.40
-WEIGHT_INTENSITY = 0.35
-WEIGHT_CONTINUITY = 0.25
+WEIGHT_DENSITY = 0.35
+WEIGHT_INTENSITY = 0.30
+WEIGHT_CONTINUITY = 0.20
+WEIGHT_DESCENT = 0.15
 
 # Ceilings (calibrated from real GPX data)
 DENSITY_CEILING = 50       # m/km (~264 ft/mi)
 INTENSITY_CEILING = 25     # calibrated: Arlington=8.3, Lake Lure=10.4, mountain=25+
 CONTINUITY_CEILING = 50    # calibrated with gradient-weighted metric: Wilmington=6.5, Arlington=31, Lake Lure=39
 CONTINUITY_EXPONENT = 1.3  # power-sum exponent for climb length weighting
+DESCENT_CEILING = 25       # same scale as INTENSITY_CEILING
+DESCENT_GRADIENT_THRESHOLD = 4.0  # % — minimum downhill grade to count as steep descent
 
 # Pre-processing
 NORMALIZE_INTERVAL = 10    # meters — fixed point density before smoothing (Option A)
@@ -458,6 +463,7 @@ def compute_score_from_parsed(gpx_data: dict, mode: str = "running") -> ScoringR
     }
 
     intensity_sum = 0.0
+    descent_intensity_sum = 0.0
     scoring_gain = 0.0  # segment-based gain — consistent source for all three score components
     climb_dist = 0.0
     climbs = []
@@ -494,6 +500,8 @@ def compute_score_from_parsed(gpx_data: dict, mode: str = "running") -> ScoringR
             if current_climb and current_climb.dist > 0:
                 climbs.append(current_climb)
             current_climb = None
+            if seg.gradient < -DESCENT_GRADIENT_THRESHOLD:
+                descent_intensity_sum += seg.dist * (abs(seg.gradient) ** 1.5)
 
     # Don't forget last climb
     if current_climb and current_climb.dist > 0:
@@ -544,11 +552,17 @@ def compute_score_from_parsed(gpx_data: dict, mode: str = "running") -> ScoringR
     intensity_score *= noise_dampener
     continuity_score *= noise_dampener
 
+    # Component 4: Descent Intensity (15%)
+    # Steep descents (>4%) cause eccentric quad loading. Same sqrt scaling as Intensity.
+    raw_descent = descent_intensity_sum / total_dist if total_dist > 0 else 0
+    descent_score = min(100, math.sqrt(raw_descent / DESCENT_CEILING) * 100)
+
     # Composite
     composite = round(
         density_score * WEIGHT_DENSITY
         + intensity_score * WEIGHT_INTENSITY
         + continuity_score * WEIGHT_CONTINUITY
+        + descent_score * WEIGHT_DESCENT
     )
 
     # Descriptor
@@ -588,6 +602,7 @@ def compute_score_from_parsed(gpx_data: dict, mode: str = "running") -> ScoringR
         density_score=round(density_score),
         intensity_score=round(intensity_score),
         continuity_score=round(continuity_score),
+        descent_score=round(descent_score),
         total_dist_km=total_dist_km,
         total_gain=gain,
         total_loss=loss,

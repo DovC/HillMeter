@@ -222,7 +222,7 @@
   /* Component scores */
   .component-scores {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
     gap: var(--space-4);
     margin-top: 20px;
     padding-top: 20px;

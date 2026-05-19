@@ -614,6 +614,11 @@ function renderResults(results) {
           <div class="component-value">${r.continuityScore}</div>
           <div class="component-label">Continuity</div>
         </div>
+        <div class="component">
+          <div class="tooltip">Steep descents (4%+) cause eccentric quad loading. Captures downhill difficulty ignored by climb-only metrics.</div>
+          <div class="component-value">${r.descentScore ?? 0}</div>
+          <div class="component-label">Descent</div>
+        </div>
       </div>
       <div class="stats-grid">
         <div class="stat-item">
